@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lowcountry Classic 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:#2d5a27; --green-light:#3d7a35; --green-pale:#e8f0e6;
+    --sand:#c8a96e; --sand-light:#e8d5b0; --cream:#faf7f0;
+    --dark:#1a1a18; --mid:#4a4a42; --muted:#888880;
+    --white:#ffffff; --red:#c0392b; --gold:#b8860b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;}
+
+  /* SYNC BAR */
+  .sync-bar{background:var(--dark);padding:6px 16px;display:flex;align-items:center;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.5px;}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;transition:background .4s;}
+  .sync-dot.live{background:#4ade80;box-shadow:0 0 6px #4ade80;}
+  .sync-dot.syncing{background:var(--sand);animation:pulse .8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .header{background:var(--green);padding:20px 20px 16px;text-align:center;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,.015) 10px,rgba(255,255,255,.015) 20px);}
+  .header-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--sand);text-transform:uppercase;margin-bottom:5px;}
+  .header h1{font-family:'Playfair Display',serif;font-size:clamp(22px,6vw,38px);font-weight:900;color:var(--white);line-height:1.1;}
+  .header-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--sand-light);margin-top:5px;letter-spacing:1px;}
+
+  .nav{background:#111;display:flex;overflow-x:auto;scrollbar-width:none;}
+  .nav::-webkit-scrollbar{display:none;}
+  .nav-btn{flex:0 0 auto;padding:11px 15px;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+  .nav-btn.active{color:var(--sand);border-bottom-color:var(--sand);}
+  .nav-btn:hover:not(.active){color:var(--white);}
+
+  .page{display:none;padding:14px;max-width:820px;margin:0 auto;}
+  .page.active{display:block;}
+
+  .section-title{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--green);margin-bottom:3px;}
+  .section-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+  .card{background:var(--white);border-radius:10px;padding:15px;margin-bottom:12px;border:1px solid #e8e4db;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+
+  /* LEADERBOARD */
+  .lb-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid #f0ece3;gap:10px;}
+  .lb-row:last-child{border-bottom:none;}
+  .lb-rank{font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:var(--muted);width:24px;text-align:center;flex-shrink:0;}
+  .lb-rank.r1{color:var(--gold);}.lb-rank.r2{color:var(--mid);}.lb-rank.r3{color:var(--sand);}
+  .lb-info{flex:1;}
+  .lb-name{font-weight:500;font-size:15px;}
+  .lb-team{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+  .lb-pts{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--green);}
+  .lb-pts-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:right;}
+  .team-card{border-left:4px solid var(--green);padding-left:14px;margin-bottom:10px;}
+  .team-card.t2{border-left-color:var(--sand);}.team-card.t3{border-left-color:var(--red);}
+  .team-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;}
+  .team-members{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin:2px 0 5px;}
+  .team-pts{font-family:'DM Mono',monospace;font-size:24px;color:var(--green);font-weight:500;}
+
+  /* SCORING */
+  .round-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
+  .round-label{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;}
+  .round-select{font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px;border:1.5px solid #ddd;border-radius:6px;background:var(--white);cursor:pointer;color:var(--dark);}
+
+  .group-nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+  .group-nav-btn{flex:1;min-width:80px;padding:7px 5px;border-radius:8px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);text-align:center;line-height:1.4;}
+  .group-nav-btn.active{background:var(--green);color:var(--white);border-color:var(--green);}
+  .group-nav-btn.done{border-color:var(--green);color:var(--green);}
+  .group-nav-btn.done.active{background:var(--green);color:var(--white);}
+
+  .matchup-block{background:var(--white);border:1px solid #e8e4db;border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .matchup-block-header{background:var(--green);padding:10px 15px;display:flex;align-items:center;justify-content:space-between;}
+  .matchup-block-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--sand-light);text-transform:uppercase;}
+  .hammer-btn{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--sand);background:transparent;color:var(--sand);cursor:pointer;transition:all .2s;letter-spacing:1px;}
+  .hammer-btn.active{background:var(--sand);color:var(--dark);}
+
+  /* SCORECARD */
+  .sc-wrap{overflow-x:auto;}
+  table.sc{width:100%;border-collapse:collapse;min-width:600px;}
+  table.sc th{background:var(--green);color:var(--sand-light);font-family:'DM Mono',monospace;font-size:10px;padding:7px 3px;text-align:center;white-space:nowrap;}
+  table.sc th.lft{text-align:left;padding-left:10px;min-width:85px;}
+  table.sc td{padding:5px 2px;text-align:center;border-bottom:1px solid #f5f2eb;font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle;}
+  table.sc td.lft{text-align:left;padding-left:10px;font-size:13px;font-family:'DM Sans',sans-serif;}
+  table.sc td.tot{font-weight:700;background:#fafaf8;font-size:12px;}
+  table.sc tr.par-row td{background:#f7f4ee;font-size:10px;color:var(--muted);}
+  table.sc tr:last-child td{border-bottom:none;}
+  table.sc td.divider,table.sc th.divider{border-left:2px solid #ccc;}
+
+  .hi{width:28px;font-family:'DM Mono',monospace;font-size:12px;text-align:center;padding:3px 1px;border:1px solid #ddd;border-radius:4px;background:var(--cream);color:var(--dark);-moz-appearance:textfield;}
+  .hi::-webkit-outer-spin-button,.hi::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .hi:focus{outline:none;border-color:var(--green);background:var(--white);}
+  .hi.ro{background:#f5f5f5;color:#aaa;border-color:#eee;}
+
+  .c-eagle{background:#bfdbfe!important;color:#1d4ed8!important;border-radius:50%;}
+  .c-birdie{background:#dbeafe!important;color:#2563eb!important;}
+  .c-bogey{background:#fee2e2!important;color:#dc2626!important;}
+  .c-double{background:#fca5a5!important;color:#b91c1c!important;border-radius:50%;}
+
+  .result-row{display:flex;align-items:center;gap:10px;padding:10px 15px;border-top:1px solid #f0ece3;}
+  .place-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;flex-shrink:0;}
+  .p1{background:#fff4cc;color:var(--gold);border:1.5px solid var(--gold);}
+  .p2{background:#f0f0f0;color:var(--mid);border:1.5px solid #aaa;}
+  .p3{background:#fce8e6;color:var(--red);border:1.5px solid var(--red);}
+  .badge-hammer{font-family:'DM Mono',monospace;font-size:9px;background:var(--sand);color:var(--dark);padding:2px 7px;border-radius:10px;letter-spacing:1px;}
+
+  .save-btn{width:100%;padding:13px;background:var(--green);color:var(--white);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-top:4px;transition:background .2s;}
+  .save-btn:hover{background:var(--green-light);}
+  .saved-notice{text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);padding:8px;}
+
+  /* CHULLIGANS */
+  .chull-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f5f2eb;}
+  .chull-row:last-child{border-bottom:none;}
+  .chull-btn{padding:4px 14px;border-radius:20px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);}
+  .chull-btn.used{background:var(--green);color:var(--white);border-color:var(--green);}
+
+  /* COURSES */
+  .course-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .course-tab{flex:0 0 auto;padding:6px 12px;border-radius:20px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);}
+  .course-tab.active{background:var(--green);color:var(--white);border-color:var(--green);}
+  .course-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .course-stat{background:var(--white);border:1px solid #e8e4db;border-radius:8px;padding:9px 12px;flex:1;min-width:70px;text-align:center;}
+  .course-stat-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--green);}
+  .course-stat-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  table.csc{width:100%;border-collapse:collapse;min-width:400px;font-family:'DM Mono',monospace;}
+  table.csc th{background:var(--green);color:var(--sand-light);font-size:10px;padding:7px 8px;text-align:center;}
+  table.csc th.lft{text-align:left;padding-left:12px;}
+  table.csc td{padding:6px 8px;text-align:center;border-bottom:1px solid #f5f2eb;font-size:12px;}
+  table.csc td.lft{text-align:left;padding-left:12px;color:var(--muted);}
+  table.csc tr.nine-hdr td{background:var(--dark);color:var(--sand);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;}
+  table.csc tr.nine-hdr td.lft{text-align:left;padding-left:12px;}
+  table.csc tr.totrow td{background:#f7f4ee;font-weight:700;}
+  .par3c{color:#2563eb;font-weight:600;}.par5c{color:var(--green);font-weight:600;}
+  .course-day{font-family:'DM Mono',monospace;font-size:10px;color:var(--sand);background:var(--green);display:inline-block;padding:3px 10px;border-radius:10px;margin-bottom:10px;letter-spacing:1px;}
+
+  /* RULES */
+  .rule-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece3;align-items:flex-start;}
+  .rule-item:last-child{border-bottom:none;}
+  .rule-icon{width:28px;height:28px;background:var(--green-pale);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .rule-text{font-size:14px;line-height:1.5;color:var(--mid);}
+  .rule-text strong{color:var(--dark);}
+  .roster-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f0ece3;gap:10px;}
+  .roster-row:last-child{border-bottom:none;}
+  .roster-hcp{font-family:'DM Mono',monospace;font-size:12px;color:var(--green);background:var(--green-pale);padding:3px 10px;border-radius:10px;}
+
+  /* OVERLAY */
+  .loading-overlay{position:fixed;inset:0;background:rgba(26,26,24,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px;}
+  .loading-overlay.hidden{display:none;}
+  .loading-spinner{width:36px;height:36px;border:3px solid rgba(200,169,110,.2);border-top-color:var(--sand);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--sand-light);letter-spacing:1px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:var(--white);font-family:'DM Mono',monospace;font-size:12px;padding:10px 20px;border-radius:30px;letter-spacing:1px;transition:transform .3s;z-index:1000;white-space:nowrap;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connecting to live game...</div>
+</div>
+
+<div class="sync-bar">
+  <div><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connecting...</span></div>
+  <div id="last-updated" style="color:#555">—</div>
+</div>
+
+<div class="header">
+  <div class="header-eyebrow">Est. 2026 · Lowcountry, SC</div>
+  <h1>Lowcountry Classic</h1>
+  <div class="header-sub">9 Players · 6 Rounds · Live Scoring</div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('leaderboard',this)">Leaderboard</button>
+  <button class="nav-btn" onclick="showPage('scoring',this)">Scorecard</button>
+  <button class="nav-btn" onclick="showPage('chulligans',this)">Chulligans</button>
+  <button class="nav-btn" onclick="showPage('schedule',this)">Schedule</button>
+  <button class="nav-btn" onclick="showPage('courses',this)">Courses</button>
+  <button class="nav-btn" onclick="showPage('rules',this)">Rules</button>
+</nav>
+
+<div id="page-leaderboard" class="page active">
+  <div class="section-title">Leaderboard</div>
+  <div class="section-sub">Live individual standings</div>
+  <div class="card" id="individual-lb"><div style="text-align:center;padding:20px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;">Loading...</div></div>
+  <div class="section-title" style="margin-top:8px;">Team Standings</div>
+  <div class="section-sub">Combined team points</div>
+  <div id="team-lb"></div>
+</div>
+
+<div id="page-scoring" class="page">
+  <div class="round-header">
+    <div class="round-label" id="round-label">Round 1</div>
+    <select class="round-select" id="round-selector" onchange="onRoundChange()">
+      <option value="0">Round 1</option>
+      <option value="1">Round 2</option>
+      <option value="2">Round 3</option>
+      <option value="3">Round 4 — Scramble</option>
+      <option value="4">Round 5</option>
+      <option value="5">Round 6</option>
+    </select>
+  </div>
+  <div id="scoring-content"></div>
+  <button class="save-btn" onclick="saveScores()">Save & Sync Round</button>
+</div>
+
+<div id="page-chulligans" class="page">
+  <div class="section-title">Chulligans</div>
+  <div class="section-sub">1 per player per round</div>
+  <div id="chulligan-content"></div>
+</div>
+
+<div id="page-schedule" class="page">
+  <div class="section-title">Schedule</div>
+  <div class="section-sub">Full matchup draw</div>
+  <div id="schedule-content"></div>
+</div>
+
+<div id="page-courses" class="page">
+  <div class="section-title">Courses</div>
+  <div class="section-sub">Hole-by-hole · Par · Handicap · Yardage</div>
+  <div class="course-tabs" id="course-tabs"></div>
+  <div id="course-content"></div>
+</div>
+
+<div id="page-rules" class="page">
+  <div class="section-title">The Rules</div>
+  <div class="section-sub">Know before you tee</div>
+  <div class="card">
+    <div class="rule-item"><div class="rule-icon">🏌️</div><div class="rule-text"><strong>Format:</strong> 3-player matchups scored hole-by-hole. Low <strong>net score</strong> wins. Round 4 is a scramble — lowest <strong>gross</strong> wins.</div></div>
+    <div class="rule-item"><div class="rule-icon">🥇</div><div class="rule-text"><strong>Points:</strong> 1st = <strong>2 pts</strong>, 2nd = <strong>1 pt</strong>, 3rd = <strong>0 pts</strong>.</div></div>
+    <div class="rule-item"><div class="rule-icon">🔨</div><div class="rule-text"><strong>Hammer:</strong> Each team can hammer 1 round. Their points double that round (4/2/0). One use per team, whole trip.</div></div>
+    <div class="rule-item"><div class="rule-icon">⛳</div><div class="rule-text"><strong>Chulligan:</strong> 1 per player per round. Use on any shot.</div></div>
+    <div class="rule-item"><div class="rule-icon">🔄</div><div class="rule-text"><strong>Live Sync:</strong> Scores update in real time for all players. Hit "Save & Sync" after entering a round to push to everyone.</div></div>
+  </div>
+  <div class="section-title" style="margin-top:8px;">Roster</div>
+  <div class="section-sub">Handicaps & Teams</div>
+  <div class="card" id="roster-card"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATIC DATA ───────────────────────────────────────────────────────────────
+const HOLES = 18;
+
+const COURSES = [
+  { id:'robbers-row', name:"Robber's Row", club:'Port Royal GC', day:'April 9 · AM', tee:'Gold', rating:72.6, slope:134, yards:6507,
+    holes:[{par:4,hcp:5,yards:368},{par:3,hcp:15,yards:170},{par:5,hcp:13,yards:523},{par:4,hcp:3,yards:395},{par:4,hcp:7,yards:346},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:378},{par:4,hcp:9,yards:362},{par:5,hcp:1,yards:513},{par:4,hcp:10,yards:339},{par:5,hcp:2,yards:524},{par:4,hcp:6,yards:426},{par:4,hcp:8,yards:358},{par:3,hcp:16,yards:161},{par:5,hcp:12,yards:489},{par:3,hcp:18,yards:203},{par:4,hcp:14,yards:365},{par:4,hcp:4,yards:408}]},
+  { id:'barony', name:'Barony', club:'Port Royal GC', day:'April 9 · PM', tee:'Gold', rating:71.8, slope:135, yards:6507,
+    holes:[{par:4,hcp:5,yards:368},{par:3,hcp:15,yards:170},{par:5,hcp:13,yards:523},{par:4,hcp:3,yards:395},{par:4,hcp:7,yards:346},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:378},{par:4,hcp:9,yards:362},{par:5,hcp:1,yards:513},{par:4,hcp:10,yards:339},{par:5,hcp:2,yards:524},{par:4,hcp:6,yards:426},{par:4,hcp:8,yards:358},{par:3,hcp:16,yards:161},{par:5,hcp:12,yards:489},{par:3,hcp:18,yards:203},{par:4,hcp:14,yards:365},{par:4,hcp:4,yards:408}]},
+  { id:'oyster-reef', name:'Oyster Reef', club:'Oyster Reef GC', day:'April 10', tee:'Gold', rating:74.1, slope:133, yards:7006,
+    holes:[{par:4,hcp:13,yards:375},{par:5,hcp:5,yards:518},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:384},{par:4,hcp:7,yards:453},{par:3,hcp:15,yards:197},{par:4,hcp:9,yards:398},{par:4,hcp:1,yards:425},{par:5,hcp:3,yards:548},{par:4,hcp:14,yards:398},{par:3,hcp:18,yards:158},{par:5,hcp:10,yards:521},{par:4,hcp:8,yards:422},{par:4,hcp:12,yards:379},{par:5,hcp:2,yards:536},{par:3,hcp:16,yards:204},{par:4,hcp:4,yards:458},{par:4,hcp:6,yards:453}]},
+  { id:'cupp', name:'Cupp Course', club:'Palmetto Hall', day:'April 11 · AM', tee:'Gold', rating:73.8, slope:139, yards:6918,
+    holes:[{par:4,hcp:1,yards:438},{par:4,hcp:15,yards:395},{par:3,hcp:13,yards:192},{par:4,hcp:3,yards:437},{par:5,hcp:5,yards:490},{par:3,hcp:17,yards:191},{par:4,hcp:9,yards:397},{par:4,hcp:11,yards:382},{par:5,hcp:7,yards:546},{par:4,hcp:6,yards:398},{par:5,hcp:12,yards:526},{par:4,hcp:8,yards:378},{par:3,hcp:18,yards:158},{par:4,hcp:4,yards:442},{par:5,hcp:14,yards:521},{par:4,hcp:10,yards:403},{par:3,hcp:16,yards:190},{par:4,hcp:2,yards:434}]},
+  { id:'hills', name:'Hills Course', club:'Palmetto Hall', day:'April 11 · PM', tee:'Gold', rating:73.8, slope:139, yards:6918,
+    holes:[{par:4,hcp:1,yards:438},{par:4,hcp:15,yards:395},{par:3,hcp:13,yards:192},{par:4,hcp:3,yards:437},{par:5,hcp:5,yards:490},{par:3,hcp:17,yards:191},{par:4,hcp:9,yards:397},{par:4,hcp:11,yards:382},{par:5,hcp:7,yards:546},{par:4,hcp:6,yards:398},{par:5,hcp:12,yards:526},{par:4,hcp:8,yards:378},{par:3,hcp:18,yards:158},{par:4,hcp:4,yards:442},{par:5,hcp:14,yards:521},{par:4,hcp:10,yards:403},{par:3,hcp:16,yards:190},{par:4,hcp:2,yards:434}]}
+];
+
+const ROUND_COURSE = ['robbers-row','barony','oyster-reef','cupp','hills','barony'];
+const getParForRound = ri => { const c=COURSES.find(x=>x.id===ROUND_COURSE[ri]); return c?c.holes.map(h=>h.par):[4,4,3,4,5,3,4,4,4,4,5,3,4,4,3,4,5,4]; };
+
+const players = [
+  {name:'Billy',    hcp:1.6,  team:1},
+  {name:'Eric',     hcp:5.9,  team:3},
+  {name:'Anthony',  hcp:8.0,  team:2},
+  {name:'Willmore', hcp:8.2,  team:3},
+  {name:'Vince',    hcp:12.4, team:2},
+  {name:'Peyton M', hcp:13.1, team:1},
+  {name:'Frank',    hcp:15.1, team:2},
+  {name:'Dylan',    hcp:16.4, team:1},
+  {name:'Peyton H', hcp:16.7, team:3},
+];
+
+const teams = [
+  {id:1, name:'Team 1', members:['Billy','Peyton M','Dylan']},
+  {id:2, name:'Team 2', members:['Anthony','Vince','Frank']},
+  {id:3, name:'Team 3', members:['Eric','Willmore','Peyton H']},
+];
+
+const rounds = [
+  {label:'Round 1', type:'match', matchups:[['Anthony','Billy','Eric'],['Vince','Peyton M','Willmore'],['Frank','Dylan','Peyton H']]},
+  {label:'Round 2', type:'match', matchups:[['Anthony','Peyton M','Peyton H'],['Vince','Dylan','Eric'],['Frank','Billy','Willmore']]},
+  {label:'Round 3', type:'match', matchups:[['Anthony','Dylan','Willmore'],['Vince','Billy','Peyton H'],['Frank','Peyton M','Eric']]},
+  {label:'Round 4 — Scramble', type:'scramble', matchups:[['Anthony','Vince','Frank'],['Billy','Peyton M','Dylan'],['Eric','Willmore','Peyton H']]},
+  {label:'Round 5', type:'match', matchups:[['Anthony','Peyton M','Eric'],['Vince','Dylan','Willmore'],['Frank','Billy','Peyton H']]},
+  {label:'Round 6', type:'match', matchups:[['Anthony','Billy','Willmore'],['Vince','Peyton M','Eric'],['Frank','Dylan','Peyton H']]},
+];
+
+// ── SHARED STATE ─────────────────────────────────────────────────────────────
+// All game data lives in shared storage key 'lc2026-game'
+// Polled every 8 seconds. On save, pushed immediately.
+
+const STORAGE_KEY = 'lc2026-game';
+const POLL_INTERVAL = 8000;
+
+function defaultState() {
+  const hs = {};
+  players.forEach(p => { hs[p.name] = rounds.map(() => Array(HOLES).fill('')); });
+  return {
+    holeScores: hs,
+    scrambleHoles: rounds.map(r => r.matchups.map(() => Array(HOLES).fill(''))),
+    hammers: {1:null, 2:null, 3:null},
+    chulligans: rounds.map(() => { const o={}; players.forEach(p=>o[p.name]=false); return o; }),
+    savedRounds: [],
+    lastUpdated: null,
+    updatedBy: null
+  };
+}
+
+// Local working copy (not yet saved to shared)
+let S = defaultState();
+let syncedAt = null;
+let pollTimer = null;
+let isSyncing = false;
+
+function guardState(s) {
+  if (!s.holeScores) { s.holeScores={}; players.forEach(p=>{s.holeScores[p.name]=rounds.map(()=>Array(HOLES).fill(''));}); }
+  if (!s.scrambleHoles) s.scrambleHoles=rounds.map(r=>r.matchups.map(()=>Array(HOLES).fill('')));
+  if (!s.savedRounds) s.savedRounds=[];
+  if (!s.hammers) s.hammers={1:null,2:null,3:null};
+  if (!s.chulligans) s.chulligans=rounds.map(()=>{const o={};players.forEach(p=>o[p.name]=false);return o;});
+  // Ensure all player hole arrays exist
+  players.forEach(p => {
+    if (!s.holeScores[p.name]) s.holeScores[p.name]=rounds.map(()=>Array(HOLES).fill(''));
+    s.holeScores[p.name].forEach((arr,ri)=>{ if(!Array.isArray(arr)||arr.length<HOLES){ s.holeScores[p.name][ri]=Array(HOLES).fill(''); } });
+  });
+  return s;
+}
+
+// ── SYNC ENGINE ───────────────────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-status');
+  if (status==='live')    { dot.className='sync-dot live';    lbl.textContent='Live'; }
+  if (status==='syncing') { dot.className='sync-dot syncing'; lbl.textContent='Syncing...'; }
+  if (status==='offline') { dot.className='sync-dot';         lbl.textContent='Offline'; }
+}
+
+async function pushState(playerName) {
+  if (!window.storage) return;
+  setSyncStatus('syncing');
+  isSyncing = true;
+  const payload = JSON.parse(JSON.stringify(S));
+  payload.lastUpdated = Date.now();
+  payload.updatedBy = playerName || 'Unknown';
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(payload), true);
+    S = payload;
+    syncedAt = Date.now();
+    setSyncStatus('live');
+    updateLastUpdatedLabel();
+  } catch(e) {
+    setSyncStatus('offline');
+  }
+  isSyncing = false;
+}
+
+async function pullState() {
+  if (!window.storage || isSyncing) return;
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true);
+    if (!result) return;
+    const remote = guardState(JSON.parse(result.value));
+    // Only update if remote is newer
+    if (!syncedAt || (remote.lastUpdated && remote.lastUpdated > (S.lastUpdated||0))) {
+      S = remote;
+      syncedAt = Date.now();
+      setSyncStatus('live');
+      updateLastUpdatedLabel();
+      refreshCurrentPage();
+    } else {
+      setSyncStatus('live');
+    }
+  } catch(e) {
+    setSyncStatus('offline');
+  }
+}
+
+function updateLastUpdatedLabel() {
+  const el = document.getElementById('last-updated');
+  if (!S.lastUpdated) { el.textContent='—'; return; }
+  const d = new Date(S.lastUpdated);
+  const hh = d.getHours().toString().padStart(2,'0');
+  const mm = d.getMinutes().toString().padStart(2,'0');
+  const ss = d.getSeconds().toString().padStart(2,'0');
+  el.textContent = `${S.updatedBy||'?'} · ${hh}:${mm}:${ss}`;
+}
+
+function refreshCurrentPage() {
+  const active = document.querySelector('.page.active')?.id?.replace('page-','');
+  if (active==='leaderboard') renderLeaderboard();
+  if (active==='scoring') renderScoring();
+  if (active==='chulligans') renderChulligans();
+  if (active==='schedule') renderSchedule();
+}
+
+async function initSync() {
+  if (!window.storage) {
+    // Fallback: load from localStorage
+    try { const s=localStorage.getItem('lc2026v4'); if(s) S=guardState(JSON.parse(s)); } catch{}
+    document.getElementById('loading-overlay').classList.add('hidden');
+    setSyncStatus('offline');
+    renderAll();
+    return;
+  }
+  setSyncStatus('syncing');
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true);
+    if (result) {
+      S = guardState(JSON.parse(result.value));
+      syncedAt = Date.now();
+    }
+    setSyncStatus('live');
+  } catch(e) {
+    setSyncStatus('offline');
+  }
+  document.getElementById('loading-overlay').classList.add('hidden');
+  renderAll();
+  // Start polling
+  pollTimer = setInterval(pullState, POLL_INTERVAL);
+}
+
+function renderAll() {
+  renderLeaderboard();
+  renderScoring();
+  renderChulligans();
+  renderRoster();
+  renderCourses();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const getP = n => players.find(p=>p.name===n);
+const pTeam = n => getP(n)?.team;
+
+function grossOf(name, ri) { return S.holeScores[name][ri].reduce((s,v)=>s+(v===''?0:+v),0); }
+function filledOf(name, ri) { return S.holeScores[name][ri].filter(v=>v!=='').length; }
+function grossScramble(ri, mi) { return S.scrambleHoles[ri][mi].reduce((s,v)=>s+(v===''?0:+v),0); }
+function filledScramble(ri, mi) { return S.scrambleHoles[ri][mi].filter(v=>v!=='').length; }
+
+function computePlaces(matchup, ri) {
+  const data = matchup.map(n => filledOf(n,ri)<HOLES ? null : {name:n, net:grossOf(n,ri)-getP(n).hcp});
+  if (data.some(d=>d===null)) return null;
+  return [...data].sort((a,b)=>a.net-b.net).map(d=>d.name);
+}
+
+function computeScramblePlaces(ri) {
+  const data = rounds[ri].matchups.map((_,mi) => filledScramble(ri,mi)<HOLES ? null : {mi, gross:grossScramble(ri,mi)});
+  if (data.some(d=>d===null)) return null;
+  return [...data].sort((a,b)=>a.gross-b.gross).map(d=>d.mi);
+}
+
+function scoreClass(g, par) {
+  if (g==='') return '';
+  const d=+g-par;
+  return d<=-2?'c-eagle':d===-1?'c-birdie':d===1?'c-bogey':d>=2?'c-double':'';
+}
+
+// ── POINTS ────────────────────────────────────────────────────────────────────
+function allPoints() {
+  const pts={}; players.forEach(p=>pts[p.name]=0);
+  rounds.forEach((round,ri) => {
+    if (!S.savedRounds.includes(ri)) return;
+    const bm=[2,1,0];
+    if (round.type==='scramble') {
+      const placed=computeScramblePlaces(ri); if(!placed) return;
+      placed.forEach((mi,rank)=>round.matchups[mi].forEach(n=>{const m=S.hammers[pTeam(n)]===ri?2:1;pts[n]+=bm[rank]*m;}));
+    } else {
+      round.matchups.forEach(matchup=>{
+        const placed=computePlaces(matchup,ri); if(!placed) return;
+        placed.forEach((n,rank)=>{const m=S.hammers[pTeam(n)]===ri?2:1;pts[n]+=bm[rank]*m;});
+      });
+    }
+  });
+  return pts;
+}
+
+function teamPoints(p) {
+  const t={};
+  teams.forEach(tm=>t[tm.id]=tm.members.reduce((s,m)=>s+(p[m]||0),0));
+  return t;
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+function renderLeaderboard() {
+  const pts=allPoints();
+  const sorted=[...players].sort((a,b)=>pts[b.name]-pts[a.name]);
+  document.getElementById('individual-lb').innerHTML=sorted.map((p,i)=>`
+    <div class="lb-row">
+      <div class="lb-rank ${['r1','r2','r3'][i]||''}">${i+1}</div>
+      <div class="lb-info"><div class="lb-name">${p.name}</div><div class="lb-team">Team ${p.team} · HCP ${p.hcp}</div></div>
+      <div><div class="lb-pts">${pts[p.name]||0}</div><div class="lb-pts-label">pts</div></div>
+    </div>`).join('');
+
+  const tp=teamPoints(pts);
+  const st=[...teams].sort((a,b)=>tp[b.id]-tp[a.id]);
+  document.getElementById('team-lb').innerHTML=st.map((t,i)=>{
+    const hb=S.hammers[t.id]!==null?` &nbsp;<span class="badge-hammer">🔨 R${S.hammers[t.id]+1}</span>`:'';
+    return `<div class="card team-card ${['t1','t2','t3'][i]}">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div><div class="team-name">${t.name}</div><div class="team-members">${t.members.join(' · ')}${hb}</div></div>
+        <div><div class="team-pts">${tp[t.id]||0}</div><div class="lb-pts-label" style="text-align:right">pts</div></div>
+      </div></div>`;
+  }).join('');
+}
+
+// ── SCORING ───────────────────────────────────────────────────────────────────
+let activeGroup=0;
+
+function onRoundChange(){activeGroup=0;renderScoring();}
+
+function renderScoring(){
+  const ri=+document.getElementById('round-selector').value;
+  document.getElementById('round-label').textContent=rounds[ri].label;
+  rounds[ri].type==='scramble'?renderScramble(ri):renderMatch(ri);
+}
+
+function scorecardTable(rows, isSaved, parArr) {
+  const hNums=Array.from({length:HOLES},(_,i)=>i+1);
+  const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
+  const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
+  const tp=op+ip;
+
+  let html=`<div class="sc-wrap"><table class="sc"><thead><tr>
+    <th class="lft">Player</th>
+    ${hNums.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
+    ${hNums.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
+    <th class="divider">IN</th><th>TOT</th><th>NET</th>
+  </tr></thead><tbody>
+  <tr class="par-row">
+    <td class="lft">Par</td>
+    ${parArr.slice(0,9).map(p=>`<td>${p}</td>`).join('')}<td>${op}</td>
+    ${parArr.slice(9).map((p,i)=>`<td class="${i===0?'divider':''}">${p}</td>`).join('')}
+    <td class="divider">${ip}</td><td>${tp}</td><td>—</td>
+  </tr>`;
+
+  rows.forEach(row=>{
+    const sc=row.scores;
+    const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const tot=out+inn;
+    const net=tot>0&&row.hcp!==undefined?(tot-row.hcp).toFixed(1):'—';
+    html+=`<tr>
+      <td class="lft">${row.label}${row.sublabel?`<br><span style="font-size:10px;color:var(--muted)">${row.sublabel}</span>`:''}</td>
+      ${sc.slice(0,9).map((v,hi)=>`<td class="${scoreClass(v,parArr[hi])}"><input class="hi${isSaved?' ro':''}" type="number" min="1" max="15" value="${v}" oninput="${row.fn}(${row.args},${hi},this.value)" ${isSaved?'readonly':''}></td>`).join('')}
+      <td class="tot">${out||'—'}</td>
+      ${sc.slice(9).map((v,i)=>{const hi=i+9;return `<td class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}"><input class="hi${isSaved?' ro':''}" type="number" min="1" max="15" value="${v}" oninput="${row.fn}(${row.args},${hi},this.value)" ${isSaved?'readonly':''}></td>`;}).join('')}
+      <td class="tot divider">${inn||'—'}</td>
+      <td class="tot">${tot||'—'}</td>
+      <td class="tot" style="color:var(--green)">${net}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  return html;
+}
+
+function renderMatch(ri) {
+  const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
+  const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
+    const done=m.every(n=>filledOf(n,ri)===HOLES);
+    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Group ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.join(' · ')}</span></button>`;
+  }).join('')}</div>`;
+
+  const mi=activeGroup; const matchup=round.matchups[mi];
+  const teamsHere=[...new Set(matchup.map(n=>pTeam(n)))];
+  const hbtns=teamsHere.map(tid=>{
+    if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) return `<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
+    return `<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
+  }).join('');
+
+  const rows=matchup.map(name=>({
+    label:`${name}${S.hammers[pTeam(name)]===ri?' <span class="badge-hammer">🔨</span>':''}`,
+    sublabel:`HCP ${getP(name).hcp}`,
+    scores:S.holeScores[name][ri],
+    hcp:getP(name).hcp,
+    fn:'setHole', args:`'${name}',${ri}`
+  }));
+
+  const placed=isSaved?computePlaces(matchup,ri):null;
+  let res='';
+  if(placed){
+    const bm=[2,1,0];
+    res=`<div class="matchup-block" style="margin-top:12px;">
+      <div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} Results</div></div>
+      ${placed.map((name,rank)=>{
+        const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
+        const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
+        return `<div class="result-row">
+          <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+          <div style="flex:1;font-weight:500">${name}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)">${net} net</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
+        </div>`;
+      }).join('')}</div>`;
+  }
+
+  document.getElementById('scoring-content').innerHTML=gnav+
+    `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} · Hole-by-Hole</div><div style="display:flex;gap:6px;align-items:center">${hbtns}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
+    res+(isSaved?`<div class="saved-notice">✓ Synced — edit any cell then re-save</div>`:'');
+}
+
+function renderScramble(ri) {
+  const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
+  const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
+    const done=filledScramble(ri,mi)===HOLES;
+    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Team ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.slice(0,2).join(' · ')}…</span></button>`;
+  }).join('')}</div>`;
+
+  const mi=activeGroup; const matchup=round.matchups[mi]; const tid=pTeam(matchup[0]);
+  let hbtn='';
+  if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) hbtn=`<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
+  else hbtn=`<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
+
+  const rows=[{label:matchup.join(', '),sublabel:'Scramble — Gross score',scores:S.scrambleHoles[ri][mi],hcp:undefined,fn:'setScrambleHole',args:`${ri},${mi}`}];
+
+  const placed=isSaved?computeScramblePlaces(ri):null;
+  let res='';
+  if(placed){
+    const bm=[2,1,0];
+    res=`<div class="matchup-block" style="margin-top:12px;">
+      <div class="matchup-block-header"><div class="matchup-block-title">Scramble Results</div></div>
+      ${placed.map((mIdx,rank)=>{
+        const mup=round.matchups[mIdx]; const itid=pTeam(mup[0]);
+        const mult=S.hammers[itid]===ri?2:1; const ep=bm[rank]*mult; const g=grossScramble(ri,mIdx);
+        return `<div class="result-row">
+          <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+          <div style="flex:1;font-size:13px;font-weight:500">${mup.join(', ')}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt/ea</div>
+        </div>`;
+      }).join('')}</div>`;
+  }
+
+  document.getElementById('scoring-content').innerHTML=gnav+
+    `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Team ${mi+1} Scorecard${S.hammers[tid]===ri?' 🔨':''}</div><div style="display:flex;gap:6px;align-items:center">${hbtn}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
+    res+(isSaved?`<div class="saved-notice">✓ Synced — edit any cell then re-save</div>`:'');
+}
+
+function setHole(name,ri,hi,val){S.holeScores[name][ri][hi]=val;}
+function setScrambleHole(ri,mi,hi,val){S.scrambleHoles[ri][mi][hi]=val;}
+
+async function toggleHammer(tid,ri) {
+  if(S.hammers[tid]===ri) S.hammers[tid]=null;
+  else if(S.hammers[tid]!==null){showToast(`Team ${tid} hammer already used on Round ${S.hammers[tid]+1}`);return;}
+  else S.hammers[tid]=ri;
+  await pushState('Hammer');
+  renderScoring(); renderSchedule();
+}
+
+async function saveScores() {
+  const ri=+document.getElementById('round-selector').value;
+  // Prompt for player name
+  const name=prompt('Your name (for the sync log):','') || 'Player';
+  if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
+  await pushState(name);
+  renderScoring(); renderLeaderboard();
+  showToast(`Round ${ri+1} synced for all players! 🔄`);
+}
+
+// ── CHULLIGANS ────────────────────────────────────────────────────────────────
+function renderChulligans(){
+  document.getElementById('chulligan-content').innerHTML=rounds.map((round,ri)=>`
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:10px;">${round.label}</div>
+      ${players.map(p=>`
+        <div class="chull-row">
+          <div style="font-size:14px;font-weight:500">${p.name}</div>
+          <button class="chull-btn ${S.chulligans[ri][p.name]?'used':''}" onclick="toggleChull(${ri},'${p.name}')">
+            ${S.chulligans[ri][p.name]?'✓ Used':'Available'}
+          </button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+async function toggleChull(ri,name){
+  S.chulligans[ri][name]=!S.chulligans[ri][name];
+  await pushState(name);
+  renderChulligans();
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────────────────────────
+function renderSchedule(){
+  document.getElementById('schedule-content').innerHTML=rounds.map((round,ri)=>`
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:3px;">${round.label}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">${round.type==='scramble'?'Team Scramble · Low Gross':'Low Net · 2/1/0 pts'}</div>
+      ${round.matchups.map((m,mi)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece3;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-width:18px">G${mi+1}</div>
+          <div style="flex:1;font-size:14px">${m.join(' <span style="color:var(--muted);font-size:11px">vs</span> ')}</div>
+          ${teams.filter(t=>S.hammers[t.id]===ri&&m.some(n=>pTeam(n)===t.id)).map(t=>`<span class="badge-hammer">T${t.id} 🔨</span>`).join('')}
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// ── COURSES ───────────────────────────────────────────────────────────────────
+let activeCourse=0;
+function renderCourses(){
+  document.getElementById('course-tabs').innerHTML=COURSES.map((c,i)=>
+    `<button class="course-tab ${i===activeCourse?'active':''}" onclick="activeCourse=${i};renderCourses()">${c.name}</button>`
+  ).join('');
+  const c=COURSES[activeCourse];
+  const front=c.holes.slice(0,9); const back=c.holes.slice(9);
+  const fy=front.reduce((s,h)=>s+h.yards,0); const by=back.reduce((s,h)=>s+h.yards,0);
+  const fp=front.reduce((s,h)=>s+h.par,0); const bp=back.reduce((s,h)=>s+h.par,0);
+  const pc=p=>p===3?'par3c':p===5?'par5c':'';
+  const hrow=(holes,off)=>holes.map((h,i)=>`<tr>
+    <td class="lft">Hole ${i+1+off}</td>
+    <td class="${pc(h.par)}">${h.par}</td>
+    <td style="${h.hcp<=9?'font-weight:700;color:var(--gold)':''}">${h.hcp}</td>
+    <td style="font-weight:500">${h.yards}</td>
+  </tr>`).join('');
+  document.getElementById('course-content').innerHTML=`
+    <div class="course-day">${c.day}</div>
+    <div class="course-meta">
+      <div class="course-stat"><div class="course-stat-val">${c.yards.toLocaleString()}</div><div class="course-stat-lbl">Yards</div></div>
+      <div class="course-stat"><div class="course-stat-val">${fp+bp}</div><div class="course-stat-lbl">Par</div></div>
+      <div class="course-stat"><div class="course-stat-val">${c.rating}</div><div class="course-stat-lbl">Rating</div></div>
+      <div class="course-stat"><div class="course-stat-val">${c.slope}</div><div class="course-stat-lbl">Slope</div></div>
+    </div>
+    <div class="sc-wrap card" style="padding:0;overflow:hidden;">
+      <table class="csc"><thead><tr><th class="lft">Hole</th><th>Par</th><th>HCP</th><th>Yards</th></tr></thead>
+      <tbody>
+        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Front Nine</td></tr>
+        ${hrow(front,0)}
+        <tr class="totrow"><td class="lft">OUT</td><td>${fp}</td><td>—</td><td>${fy}</td></tr>
+        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Back Nine</td></tr>
+        ${hrow(back,9)}
+        <tr class="totrow"><td class="lft">IN</td><td>${bp}</td><td>—</td><td>${by}</td></tr>
+        <tr class="totrow" style="border-top:2px solid var(--green)">
+          <td class="lft" style="color:var(--green);font-weight:700">TOTAL</td>
+          <td style="color:var(--green);font-weight:700">${fp+bp}</td><td>—</td>
+          <td style="color:var(--green);font-weight:700">${c.yards.toLocaleString()}</td>
+        </tr>
+      </tbody></table>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;padding:0 4px;">
+      🟡 Bold = top 9 hardest holes &nbsp;·&nbsp; <span style="color:#2563eb">Blue = Par 3</span> &nbsp;·&nbsp; <span style="color:var(--green)">Green = Par 5</span>
+    </div>`;
+}
+
+// ── ROSTER ────────────────────────────────────────────────────────────────────
+function renderRoster(){
+  document.getElementById('roster-card').innerHTML=players.map(p=>`
+    <div class="roster-row">
+      <div style="flex:1;font-weight:500">${p.name}</div>
+      <div class="roster-hcp">${p.hcp}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Team ${p.team}</div>
+    </div>`).join('');
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='leaderboard') renderLeaderboard();
+  if(name==='scoring') renderScoring();
+  if(name==='chulligans') renderChulligans();
+  if(name==='schedule') renderSchedule();
+  if(name==='courses') renderCourses();
+  if(name==='rules') renderRoster();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+initSync();
+</script>
+</body>
+</html>
