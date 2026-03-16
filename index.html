@@ -246,7 +246,6 @@
     </select>
   </div>
   <div id="scoring-content"></div>
-  <button class="save-btn" id="save-btn" onclick="saveScores()">💾 Save & Sync to Everyone</button>
 </div>
 
 <div id="page-chulligans" class="page">
@@ -594,9 +593,9 @@ function renderLeaderboard() {
 
 // ── SCORING ───────────────────────────────────────────────────────────────────
 let activeGroup = 0;
-let pushTimer = null; // debounce timer for auto-push
+let editMode = false; // true = inputs unlocked for currentUser
 
-function onRoundChange(){ activeGroup=0; renderScoring(); }
+function onRoundChange(){ activeGroup=0; editMode=false; renderScoring(); }
 
 function renderScoring(){
   const ri = +document.getElementById('round-selector').value;
@@ -606,83 +605,89 @@ function renderScoring(){
   rounds[ri].type==='scramble' ? renderScramble(ri) : renderMatch(ri);
 }
 
-// Called by Firebase listener — only updates totals/results, never re-renders inputs
+// Soft refresh — called by Firebase listener, never touches inputs
 function softRefreshScoring(){
   const ri = +document.getElementById('round-selector').value;
-  if (rounds[ri].type==='scramble') { softRefreshScrambleTotals(ri); return; }
-  // Update each player's OUT/IN/TOT/NET cells without touching inputs
   const round = rounds[ri];
   const mi = activeGroup;
-  const matchup = round.matchups[mi];
-  matchup.forEach(name => {
+
+  if(round.type==='scramble'){
+    // Update other teams' totals only
+    round.matchups.forEach((_,mIdx) => {
+      if(mIdx === mi) return; // skip active group — user may be editing
+      const sc = S.scrambleHoles[ri][mIdx];
+      const out = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+      const inn = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+      const oe=document.getElementById(`sc-out-${ri}-${mIdx}`);
+      const ie=document.getElementById(`sc-in-${ri}-${mIdx}`);
+      const te=document.getElementById(`sc-tot-${ri}-${mIdx}`);
+      if(oe) oe.textContent=out||'—';
+      if(ie) ie.textContent=inn||'—';
+      if(te) te.textContent=(out+inn)||'—';
+    });
+    return;
+  }
+
+  // For match rounds: update every player's totals + other players' input values
+  round.matchups[mi].forEach(name => {
+    const isMe = name===currentUser;
     const scores = S.holeScores[name][ri];
     const out = scores.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
     const inn = scores.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
     const tot = out+inn;
     const net = tot>0 ? (tot-getP(name).hcp).toFixed(1) : '—';
-    const safeId = name.replace(/\s/g,'_');
-    const outEl = document.getElementById(`out-${safeId}-${ri}`);
-    const inEl  = document.getElementById(`in-${safeId}-${ri}`);
-    const totEl = document.getElementById(`tot-${safeId}-${ri}`);
-    const netEl = document.getElementById(`net-${safeId}-${ri}`);
-    if(outEl) outEl.textContent = out||'—';
-    if(inEl)  inEl.textContent  = inn||'—';
-    if(totEl) totEl.textContent = tot||'—';
-    if(netEl) netEl.textContent = net;
-    // Update score colors on OTHER players' cells (not current user — they're typing)
-    if(name !== currentUser){
-      scores.forEach((v,hi) => {
-        const cell = document.getElementById(`cell-${safeId}-${ri}-${hi}`);
-        if(cell){
-          cell.className = scoreClass(v, getParForRound(ri)[hi]);
-          const inp = cell.querySelector('input');
-          if(inp && inp.value !== v) inp.value = v;
-        }
+    const sid = name.replace(/\s/g,'_');
+    const oe=document.getElementById(`out-${sid}-${ri}`);
+    const ie=document.getElementById(`in-${sid}-${ri}`);
+    const te=document.getElementById(`tot-${sid}-${ri}`);
+    const ne=document.getElementById(`net-${sid}-${ri}`);
+    if(oe) oe.textContent=out||'—';
+    if(ie) ie.textContent=inn||'—';
+    if(te) te.textContent=tot||'—';
+    if(ne) ne.textContent=net;
+    // Update other players' cell values and colors (never touch your own while editing)
+    if(!isMe || !editMode){
+      const parArr = getParForRound(ri);
+      scores.forEach((v,hi)=>{
+        const cell=document.getElementById(`cell-${sid}-${ri}-${hi}`);
+        if(!cell) return;
+        const inp=cell.querySelector('input');
+        if(inp && inp.value!==String(v)) inp.value=v;
+        cell.className = scoreClass(v,parArr[hi])+(hi>=9&&hi===9?' divider':'');
       });
     }
   });
-  // Refresh results block
-  updateResultsBlock(ri, mi, matchup);
-}
-
-function softRefreshScrambleTotals(ri){
-  const mi = activeGroup;
-  const scores = S.scrambleHoles[ri][mi];
-  const out = scores.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const inn = scores.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const tot = out+inn;
-  const el_out = document.getElementById(`sc-out-${ri}-${mi}`);
-  const el_in  = document.getElementById(`sc-in-${ri}-${mi}`);
-  const el_tot = document.getElementById(`sc-tot-${ri}-${mi}`);
-  if(el_out) el_out.textContent = out||'—';
-  if(el_in)  el_in.textContent  = inn||'—';
-  if(el_tot) el_tot.textContent = tot||'—';
+  // Refresh results
+  updateResultsBlock(ri, mi, round.matchups[mi]);
 }
 
 function updateResultsBlock(ri, mi, matchup){
-  const placed = S.savedRounds.includes(ri) ? computePlaces(matchup,ri) : null;
-  const el = document.getElementById(`results-block-${ri}-${mi}`);
+  const el=document.getElementById(`results-block-${ri}-${mi}`);
   if(!el) return;
-  if(!placed){ el.innerHTML=''; return; }
+  const placed = S.savedRounds.includes(ri) ? computePlaces(matchup,ri) : null;
+  if(!placed){ el.style.display='none'; return; }
+  el.style.display='block';
   const bm=[2,1,0];
-  el.innerHTML = placed.map((name,rank)=>{
-    const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
-    const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
-    return `<div class="result-row">
-      <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
-      <div style="flex:1;font-weight:500">${name}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
-      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
-      <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
-    </div>`;
-  }).join('');
+  el.innerHTML=`<div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} Results</div></div>`+
+    placed.map((name,rank)=>{
+      const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
+      const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
+      return `<div class="result-row">
+        <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+        <div style="flex:1;font-weight:500">${name}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
+      </div>`;
+    }).join('');
 }
 
-function scorecardTable(rows, parArr){
-  const hN = Array.from({length:HOLES},(_,i)=>i+1);
-  const op = parArr.slice(0,9).reduce((a,b)=>a+b,0);
-  const ip = parArr.slice(9).reduce((a,b)=>a+b,0);
-  let html = `<div class="sc-wrap"><table class="sc"><thead><tr>
+// Build the 18-hole input table
+function scorecardTable(rows, parArr, ri){
+  const hN=Array.from({length:HOLES},(_,i)=>i+1);
+  const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
+  const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
+  let html=`<div class="sc-wrap"><table class="sc"><thead><tr>
     <th class="lft">Player</th>
     ${hN.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
     ${hN.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
@@ -694,256 +699,243 @@ function scorecardTable(rows, parArr){
     <td class="divider">${ip}</td><td>${op+ip}</td><td>—</td>
   </tr>`;
 
-  rows.forEach(row => {
-    const sc = row.scores;
-    const out = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-    const inn = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-    const tot = out+inn;
-    const net = tot>0 && row.hcp!==undefined ? (tot-row.hcp).toFixed(1) : '—';
-    const isMe = row.name === currentUser;
-    const safeId = row.name.replace(/\s/g,'_');
-    const ri = row.ri;
-
-    html += `<tr style="${isMe?'background:#f9fdf8;':''}}">
+  rows.forEach(row=>{
+    const isMe = row.name===currentUser;
+    const canEdit = isMe && editMode;
+    const sc=row.scores;
+    const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const tot=out+inn;
+    const net=tot>0&&row.hcp!==undefined?(tot-row.hcp).toFixed(1):'—';
+    const sid=row.name.replace(/\s/g,'_');
+    html+=`<tr style="${isMe?'background:#f6fbf6;':''}">
       <td class="lft">${row.label}${row.sub?`<br><span style="font-size:10px;color:var(--muted)">${row.sub}</span>`:''}
-        ${isMe?'<span style="font-family:\'DM Mono\',monospace;font-size:9px;color:var(--green);margin-left:4px;">YOU</span>':''}
+        ${isMe?`<br><span style="font-size:9px;font-family:'DM Mono',monospace;color:${canEdit?'var(--green)':'var(--muted)'};">${canEdit?'✏️ editing':'🔒 locked'}</span>`:''}
       </td>
       ${sc.slice(0,9).map((v,hi)=>`
-        <td id="cell-${safeId}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}">
-          <input class="hi${isMe?'':' ro'}" type="number" min="1" max="15" value="${v}"
-            ${isMe ? `oninput="onHoleInput('${row.name}',${ri},${hi},this)"` : 'readonly tabindex="-1"'}>
+        <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}">
+          <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onHoleInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
         </td>`).join('')}
-      <td class="tot" id="out-${safeId}-${ri}">${out||'—'}</td>
-      ${sc.slice(9).map((v,i)=>{const hi=i+9; return `
-        <td id="cell-${safeId}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}">
-          <input class="hi${isMe?'':' ro'}" type="number" min="1" max="15" value="${v}"
-            ${isMe ? `oninput="onHoleInput('${row.name}',${ri},${hi},this)"` : 'readonly tabindex="-1"'}>
+      <td class="tot" id="out-${sid}-${ri}">${out||'—'}</td>
+      ${sc.slice(9).map((v,i)=>{const hi=i+9;return `
+        <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}">
+          <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onHoleInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
         </td>`;}).join('')}
-      <td class="tot divider" id="in-${safeId}-${ri}">${inn||'—'}</td>
-      <td class="tot" id="tot-${safeId}-${ri}">${tot||'—'}</td>
-      <td class="tot" style="color:var(--green)" id="net-${safeId}-${ri}">${net}</td>
+      <td class="tot divider" id="in-${sid}-${ri}">${inn||'—'}</td>
+      <td class="tot" id="tot-${sid}-${ri}">${tot||'—'}</td>
+      <td class="tot" style="color:var(--green)" id="net-${sid}-${ri}">${net}</td>
     </tr>`;
   });
-  return html + '</tbody></table></div>';
+  return html+'</tbody></table></div>';
 }
 
-// Called on every keystroke — updates local state + DOM totals instantly, debounces Firebase push
+// Live update totals as user types (no Firebase push here)
 function onHoleInput(name, ri, hi, input){
-  const val = input.value;
-  S.holeScores[name][ri][hi] = val;
+  const val=input.value;
+  S.holeScores[name][ri][hi]=val;
+  const parArr=getParForRound(ri);
+  const cell=input.parentElement;
+  const divClass = (hi===9)?' divider':'';
+  cell.className=scoreClass(val,parArr[hi])+divClass;
+  const scores=S.holeScores[name][ri];
+  const out=scores.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=scores.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const tot=out+inn;
+  const net=tot>0?(tot-getP(name).hcp).toFixed(1):'—';
+  const sid=name.replace(/\s/g,'_');
+  document.getElementById(`out-${sid}-${ri}`).textContent=out||'—';
+  document.getElementById(`in-${sid}-${ri}`).textContent=inn||'—';
+  document.getElementById(`tot-${sid}-${ri}`).textContent=tot||'—';
+  document.getElementById(`net-${sid}-${ri}`).textContent=net;
+}
 
-  // Update score color on the cell immediately
-  const parArr = getParForRound(ri);
-  const cell = input.parentElement;
-  cell.className = scoreClass(val, parArr[hi]) + (hi===9?' divider':'');
+function onScrambleInput(ri, mi, hi, input){
+  const val=input.value;
+  S.scrambleHoles[ri][mi][hi]=val;
+  const parArr=getParForRound(ri);
+  input.parentElement.className=scoreClass(val,parArr[hi])+(hi===9?' divider':'');
+  const sc=S.scrambleHoles[ri][mi];
+  const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  document.getElementById(`sc-out-${ri}-${mi}`).textContent=out||'—';
+  document.getElementById(`sc-in-${ri}-${mi}`).textContent=inn||'—';
+  document.getElementById(`sc-tot-${ri}-${mi}`).textContent=(out+inn)||'—';
+}
 
-  // Update OUT/IN/TOT/NET for this player instantly
-  const scores = S.holeScores[name][ri];
-  const out = scores.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const inn = scores.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const tot = out+inn;
-  const net = tot>0 ? (tot-getP(name).hcp).toFixed(1) : '—';
-  const safeId = name.replace(/\s/g,'_');
-  document.getElementById(`out-${safeId}-${ri}`).textContent = out||'—';
-  document.getElementById(`in-${safeId}-${ri}`).textContent  = inn||'—';
-  document.getElementById(`tot-${safeId}-${ri}`).textContent = tot||'—';
-  document.getElementById(`net-${safeId}-${ri}`).textContent = net;
+function enterEditMode(){
+  editMode=true;
+  renderScoring();
+}
 
-  // Debounce push to Firebase — waits 1.5s after last keystroke
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
-    await pushToFirebase();
-    renderLeaderboard();
-  }, 1500);
+async function saveScores(){
+  const ri=+document.getElementById('round-selector').value;
+  const btn=document.getElementById('save-btn');
+  const editBtn=document.getElementById('edit-btn');
+  btn.disabled=true; btn.textContent='Saving...';
+  editMode=false;
+  if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
+  await pushToFirebase();
+  btn.disabled=false;
+  renderScoring();
+  renderLeaderboard();
+  showToast(`Round ${ri+1} saved & synced! 🔴`);
 }
 
 function renderMatch(ri){
-  const round = rounds[ri];
-  const gnav = `<div class="group-nav">${round.matchups.map((m,mi)=>{
-    const done = m.every(n=>filledOf(n,ri)===HOLES);
-    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Group ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.join(' · ')}</span></button>`;
+  const round=rounds[ri];
+  const mi=activeGroup;
+  const matchup=round.matchups[mi];
+
+  // Is currentUser in this group?
+  const iAmInGroup = matchup.includes(currentUser);
+
+  const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
+    const done=m.every(n=>filledOf(n,ri)===HOLES);
+    return `<button class="group-nav-btn ${gmi===mi?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${gmi};editMode=false;renderScoring()">Group ${gmi+1}<br><span style="font-size:9px;opacity:.75">${m.join(' · ')}</span></button>`;
   }).join('')}</div>`;
 
-  const mi = activeGroup;
-  const matchup = round.matchups[mi];
-  const teamsHere = [...new Set(matchup.map(n=>pTeam(n)))];
-  const hbtns = teamsHere.map(tid=>{
+  const teamsHere=[...new Set(matchup.map(n=>pTeam(n)))];
+  const hbtns=teamsHere.map(tid=>{
     if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) return `<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
     return `<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
   }).join('');
 
-  const rows = matchup.map(name=>({
+  const rows=matchup.map(name=>({
     name,
-    label: `${name}${S.hammers[pTeam(name)]===ri?' <span class="badge-hammer">🔨</span>':''}`,
-    sub: `HCP ${getP(name).hcp}`,
-    scores: S.holeScores[name][ri],
-    hcp: getP(name).hcp,
+    label:`${name}${S.hammers[pTeam(name)]===ri?' <span class="badge-hammer">🔨</span>':''}`,
+    sub:`HCP ${getP(name).hcp}`,
+    scores:S.holeScores[name][ri],
+    hcp:getP(name).hcp,
     ri
   }));
 
-  // Results block (shown if round saved)
-  const placed = S.savedRounds.includes(ri) ? computePlaces(matchup,ri) : null;
-  const resInner = placed ? (() => {
-    const bm=[2,1,0];
-    return placed.map((name,rank)=>{
-      const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
-      const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
-      return `<div class="result-row">
-        <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
-        <div style="flex:1;font-weight:500">${name}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
-        <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
-      </div>`;
-    }).join('');
-  })() : '';
+  const placed=S.savedRounds.includes(ri)?computePlaces(matchup,ri):null;
+  const resHtml=placed?`
+    <div class="matchup-block" id="results-block-${ri}-${mi}" style="margin-top:12px;">
+      <div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} Results</div></div>
+      ${(()=>{const bm=[2,1,0];return placed.map((name,rank)=>{
+        const mult=S.hammers[pTeam(name)]===ri?2:1;const ep=bm[rank]*mult;
+        const g=grossOf(name,ri);const net=(g-getP(name).hcp).toFixed(1);
+        return `<div class="result-row">
+          <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+          <div style="flex:1;font-weight:500">${name}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
+        </div>`;}).join('');})()}
+    </div>`:`<div id="results-block-${ri}-${mi}" style="display:none"></div>`;
 
-  document.getElementById('scoring-content').innerHTML =
-    gnav +
+  // Edit/Save buttons — only shown if you're in this group
+  const actionBtns = iAmInGroup ? `
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      ${!editMode?`<button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);" onclick="enterEditMode()">✏️ Edit My Scores</button>`:''}
+      ${editMode?`<button id="save-btn" class="save-btn" onclick="saveScores()">💾 Save & Sync</button>`:''}
+    </div>` : `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your group</div>`;
+
+  document.getElementById('scoring-content').innerHTML=
+    gnav+
     `<div class="matchup-block">
       <div class="matchup-block-header">
-        <div class="matchup-block-title">Group ${mi+1} · Hole-by-Hole</div>
+        <div class="matchup-block-title">Group ${mi+1} · ${round.label}</div>
         <div style="display:flex;gap:6px;align-items:center">${hbtns}</div>
       </div>
-      ${scorecardTable(rows, getParForRound(ri))}
-    </div>
-    <div class="matchup-block" id="results-block-${ri}-${mi}" style="margin-top:12px;">
-      ${resInner ? `<div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} Results</div></div>${resInner}` : ''}
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">
-      ✏️ Edit your holes freely · changes auto-sync after 1.5s
-    </div>`;
+      ${scorecardTable(rows,getParForRound(ri),ri)}
+    </div>`+
+    resHtml+
+    actionBtns;
 }
 
 function renderScramble(ri){
-  const round = rounds[ri];
-  const gnav = `<div class="group-nav">${round.matchups.map((m,mi)=>{
-    const done = filledScramble(ri,mi)===HOLES;
-    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Team ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.slice(0,2).join(' · ')}…</span></button>`;
+  const round=rounds[ri];
+  const mi=activeGroup;
+  const matchup=round.matchups[mi];
+  const tid=pTeam(matchup[0]);
+  const isMyTeam=matchup.includes(currentUser);
+
+  const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
+    const done=filledScramble(ri,gmi)===HOLES;
+    return `<button class="group-nav-btn ${gmi===mi?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${gmi};editMode=false;renderScoring()">Team ${gmi+1}<br><span style="font-size:9px;opacity:.75">${m.slice(0,2).join(' · ')}…</span></button>`;
   }).join('')}</div>`;
 
-  const mi = activeGroup;
-  const matchup = round.matchups[mi];
-  const tid = pTeam(matchup[0]);
-  const isMyTeam = matchup.includes(currentUser);
-
-  let hbtn = '';
+  let hbtn='';
   if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) hbtn=`<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
   else hbtn=`<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
 
-  const sc = S.scrambleHoles[ri][mi];
-  const parArr = getParForRound(ri);
-  const hN = Array.from({length:HOLES},(_,i)=>i+1);
-  const op = parArr.slice(0,9).reduce((a,b)=>a+b,0);
-  const ip = parArr.slice(9).reduce((a,b)=>a+b,0);
-  const out = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const inn = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const tot = out+inn;
+  const sc=S.scrambleHoles[ri][mi];
+  const parArr=getParForRound(ri);
+  const hN=Array.from({length:HOLES},(_,i)=>i+1);
+  const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
+  const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
+  const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const canEdit=isMyTeam&&editMode;
 
-  const tableHtml = `<div class="sc-wrap"><table class="sc"><thead><tr>
+  const tableHtml=`<div class="sc-wrap"><table class="sc"><thead><tr>
     <th class="lft">Team</th>
     ${hN.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
     ${hN.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
-    <th class="divider">IN</th><th>TOT</th><th>NET</th>
+    <th class="divider">IN</th><th>TOT</th><th>—</th>
   </tr></thead><tbody>
   <tr class="par-row"><td class="lft">Par</td>
     ${parArr.slice(0,9).map(p=>`<td>${p}</td>`).join('')}<td>${op}</td>
     ${parArr.slice(9).map((p,i)=>`<td class="${i===0?'divider':''}">${p}</td>`).join('')}
     <td class="divider">${ip}</td><td>${op+ip}</td><td>—</td>
   </tr>
-  <tr style="${isMyTeam?'background:#f9fdf8;':''}">
-    <td class="lft">${matchup.join(', ')}<br><span style="font-size:10px;color:var(--muted)">Scramble</span></td>
+  <tr style="${isMyTeam?'background:#f6fbf6;':''}">
+    <td class="lft">${matchup.join(', ')}<br>
+      <span style="font-size:10px;color:var(--muted)">Scramble · Gross</span>
+      ${isMyTeam?`<br><span style="font-size:9px;font-family:'DM Mono',monospace;color:${canEdit?'var(--green)':'var(--muted)'};">${canEdit?'✏️ editing':'🔒 locked'}</span>`:''}
+    </td>
     ${sc.slice(0,9).map((v,hi)=>`
       <td class="${scoreClass(v,parArr[hi])}">
-        <input class="hi${isMyTeam?'':' ro'}" type="number" min="1" max="15" value="${v}"
-          ${isMyTeam?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
+        <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+          ${canEdit?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
       </td>`).join('')}
     <td class="tot" id="sc-out-${ri}-${mi}">${out||'—'}</td>
-    ${sc.slice(9).map((v,i)=>{const hi=i+9; return `
+    ${sc.slice(9).map((v,i)=>{const hi=i+9;return `
       <td class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}">
-        <input class="hi${isMyTeam?'':' ro'}" type="number" min="1" max="15" value="${v}"
-          ${isMyTeam?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
+        <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+          ${canEdit?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
       </td>`;}).join('')}
     <td class="tot divider" id="sc-in-${ri}-${mi}">${inn||'—'}</td>
-    <td class="tot" id="sc-tot-${ri}-${mi}">${tot||'—'}</td>
-    <td class="tot" style="color:var(--muted)">—</td>
-  </tr>
-  </tbody></table></div>`;
+    <td class="tot" id="sc-tot-${ri}-${mi}">${(out+inn)||'—'}</td>
+    <td class="tot">—</td>
+  </tr></tbody></table></div>`;
 
-  // Results
-  const placed = S.savedRounds.includes(ri) ? computeScramblePlaces(ri) : null;
-  const resInner = placed ? (() => {
-    const bm=[2,1,0];
-    return placed.map((mIdx,rank)=>{
-      const mup=round.matchups[mIdx]; const itid=pTeam(mup[0]);
-      const mult=S.hammers[itid]===ri?2:1; const ep=bm[rank]*mult; const g=grossScramble(ri,mIdx);
-      return `<div class="result-row">
-        <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
-        <div style="flex:1;font-size:13px;font-weight:500">${mup.join(', ')}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
-        <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt/ea</div>
-      </div>`;
-    }).join('');
-  })() : '';
+  const placed=S.savedRounds.includes(ri)?computeScramblePlaces(ri):null;
+  const resHtml=placed?`
+    <div class="matchup-block" style="margin-top:12px;">
+      <div class="matchup-block-header"><div class="matchup-block-title">Scramble Results</div></div>
+      ${(()=>{const bm=[2,1,0];return placed.map((mIdx,rank)=>{
+        const mup=round.matchups[mIdx];const itid=pTeam(mup[0]);
+        const mult=S.hammers[itid]===ri?2:1;const ep=bm[rank]*mult;const g=grossScramble(ri,mIdx);
+        return `<div class="result-row">
+          <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+          <div style="flex:1;font-size:13px;font-weight:500">${mup.join(', ')}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt/ea</div>
+        </div>`;}).join('');})()}
+    </div>`:'';
 
-  document.getElementById('scoring-content').innerHTML =
-    gnav +
+  const actionBtns=isMyTeam?`
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      ${!editMode?`<button class="save-btn" style="background:var(--sand);color:var(--dark);" onclick="enterEditMode()">✏️ Edit My Team's Scores</button>`:''}
+      ${editMode?`<button id="save-btn" class="save-btn" onclick="saveScores()">💾 Save & Sync</button>`:''}
+    </div>`:`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your team</div>`;
+
+  document.getElementById('scoring-content').innerHTML=
+    gnav+
     `<div class="matchup-block">
       <div class="matchup-block-header">
-        <div class="matchup-block-title">Team ${mi+1} Scorecard${S.hammers[tid]===ri?' 🔨':''}</div>
+        <div class="matchup-block-title">Team ${mi+1} Scramble${S.hammers[tid]===ri?' 🔨':''}</div>
         <div style="display:flex;gap:6px;align-items:center">${hbtn}</div>
       </div>
       ${tableHtml}
-    </div>
-    <div class="matchup-block" id="results-block-${ri}-${mi}" style="margin-top:12px;">
-      ${resInner ? `<div class="matchup-block-header"><div class="matchup-block-title">Scramble Results</div></div>${resInner}` : ''}
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">
-      ${isMyTeam ? '✏️ Edit holes freely · auto-syncs after 1.5s' : '👁 View only — not your team'}
-    </div>`;
-}
-
-function onScrambleInput(ri, mi, hi, input){
-  const val = input.value;
-  S.scrambleHoles[ri][mi][hi] = val;
-  const parArr = getParForRound(ri);
-  input.parentElement.className = scoreClass(val, parArr[hi]) + (hi===9?' divider':'');
-  const sc = S.scrambleHoles[ri][mi];
-  const out = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const inn = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-  const tot = out+inn;
-  document.getElementById(`sc-out-${ri}-${mi}`).textContent = out||'—';
-  document.getElementById(`sc-in-${ri}-${mi}`).textContent  = inn||'—';
-  document.getElementById(`sc-tot-${ri}-${mi}`).textContent = tot||'—';
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
-    await pushToFirebase();
-    renderLeaderboard();
-  }, 1500);
-}
-
-async function toggleHammer(tid,ri){
-  if(S.hammers[tid]===ri) S.hammers[tid]=null;
-  else if(S.hammers[tid]!==null){showToast(`Team ${tid} hammer already used on Round ${S.hammers[tid]+1}`);return;}
-  else S.hammers[tid]=ri;
-  await pushToFirebase();
-  renderScoring(); renderSchedule();
-}
-
-async function saveScores(){
-  const ri = +document.getElementById('round-selector').value;
-  const btn = document.getElementById('save-btn');
-  btn.disabled=true; btn.textContent='Syncing...';
-  if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
-  clearTimeout(pushTimer); // cancel any pending debounce
-  await pushToFirebase();
-  btn.disabled=false; btn.textContent='💾 Save & Sync to Everyone';
-  renderLeaderboard();
-  // Refresh results block only
-  const round = rounds[ri];
-  const matchup = round.matchups[activeGroup];
-  updateResultsBlock(ri, activeGroup, matchup);
-  showToast(`Round ${ri+1} results saved! 🔴`);
+    </div>`+
+    resHtml+
+    actionBtns;
 }
 
 // ── CHULLIGANS ────────────────────────────────────────────────────────────────
