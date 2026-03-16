@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lowcountry Classic 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
- 
+
 <!-- ============================================================
      🔥 FIREBASE CONFIG — PASTE YOUR VALUES BELOW
      
@@ -25,11 +25,11 @@
   };
 </script>
 <!-- ============================================================ -->
- 
+
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
- 
+
 <style>
   :root {
     --green:#2d5a27; --green-light:#3d7a35; --green-pale:#e8f0e6;
@@ -39,7 +39,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;}
- 
+
   /* SYNC BAR */
   .sync-bar{background:var(--dark);padding:6px 16px;display:flex;align-items:center;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.5px;}
   .sync-dot{width:7px;height:7px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;transition:background .4s;}
@@ -47,25 +47,25 @@
   .sync-dot.syncing{background:var(--sand);animation:pulse .8s infinite;}
   .sync-dot.offline{background:#ef4444;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
- 
+
   .header{background:var(--green);padding:20px 20px 16px;text-align:center;position:relative;overflow:hidden;}
   .header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,.015) 10px,rgba(255,255,255,.015) 20px);}
   .header-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--sand);text-transform:uppercase;margin-bottom:5px;}
   .header h1{font-family:'Playfair Display',serif;font-size:clamp(22px,6vw,38px);font-weight:900;color:var(--white);line-height:1.1;}
   .header-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--sand-light);margin-top:5px;letter-spacing:1px;}
- 
+
   .nav{background:#111;display:flex;overflow-x:auto;scrollbar-width:none;}
   .nav::-webkit-scrollbar{display:none;}
   .nav-btn{flex:0 0 auto;padding:11px 15px;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
   .nav-btn.active{color:var(--sand);border-bottom-color:var(--sand);}
   .nav-btn:hover:not(.active){color:var(--white);}
- 
+
   .page{display:none;padding:14px;max-width:820px;margin:0 auto;}
   .page.active{display:block;}
   .section-title{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--green);margin-bottom:3px;}
   .section-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
   .card{background:var(--white);border-radius:10px;padding:15px;margin-bottom:12px;border:1px solid #e8e4db;box-shadow:0 1px 4px rgba(0,0,0,.06);}
- 
+
   /* LEADERBOARD */
   .lb-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid #f0ece3;gap:10px;}
   .lb-row:last-child{border-bottom:none;}
@@ -81,7 +81,7 @@
   .team-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;}
   .team-members{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin:2px 0 5px;}
   .team-pts{font-family:'DM Mono',monospace;font-size:24px;color:var(--green);font-weight:500;}
- 
+
   /* SCORING */
   .round-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
   .round-label{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;}
@@ -96,7 +96,7 @@
   .matchup-block-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--sand-light);text-transform:uppercase;}
   .hammer-btn{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--sand);background:transparent;color:var(--sand);cursor:pointer;transition:all .2s;letter-spacing:1px;}
   .hammer-btn.active{background:var(--sand);color:var(--dark);}
- 
+
   /* SCORECARD TABLE */
   .sc-wrap{overflow-x:auto;}
   table.sc{width:100%;border-collapse:collapse;min-width:600px;}
@@ -126,13 +126,13 @@
   .save-btn:hover{background:var(--green-light);}
   .save-btn:disabled{background:#aaa;cursor:not-allowed;}
   .saved-notice{text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);padding:8px;}
- 
+
   /* CHULLIGANS */
   .chull-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f5f2eb;}
   .chull-row:last-child{border-bottom:none;}
   .chull-btn{padding:4px 14px;border-radius:20px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);}
   .chull-btn.used{background:var(--green);color:var(--white);border-color:var(--green);}
- 
+
   /* COURSES */
   .course-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
   .course-tab{flex:0 0 auto;padding:6px 12px;border-radius:20px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);}
@@ -151,7 +151,7 @@
   table.csc tr.totrow td{background:#f7f4ee;font-weight:700;}
   .par3c{color:#2563eb;font-weight:600;}.par5c{color:var(--green);font-weight:600;}
   .course-day{font-family:'DM Mono',monospace;font-size:10px;color:var(--sand);background:var(--green);display:inline-block;padding:3px 10px;border-radius:10px;margin-bottom:10px;letter-spacing:1px;}
- 
+
   /* RULES */
   .rule-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece3;align-items:flex-start;}
   .rule-item:last-child{border-bottom:none;}
@@ -161,7 +161,7 @@
   .roster-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f0ece3;gap:10px;}
   .roster-row:last-child{border-bottom:none;}
   .roster-hcp{font-family:'DM Mono',monospace;font-size:12px;color:var(--green);background:var(--green-pale);padding:3px 10px;border-radius:10px;}
- 
+
   /* SETUP SCREEN */
   .setup-screen{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px;gap:16px;}
   .setup-screen.hidden{display:none;}
@@ -172,20 +172,20 @@
   .name-btn:hover,.name-btn.selected{background:var(--green);color:var(--white);border-color:var(--green);}
   .setup-continue{padding:14px 32px;background:var(--sand);color:var(--dark);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;margin-top:8px;}
   .setup-continue:disabled{background:#333;color:#666;cursor:not-allowed;}
- 
+
   /* LOADING */
   .loading-overlay{position:fixed;inset:0;background:rgba(26,26,24,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:998;gap:14px;}
   .loading-overlay.hidden{display:none;}
   .spinner{width:34px;height:34px;border:3px solid rgba(200,169,110,.2);border-top-color:var(--sand);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--sand-light);letter-spacing:1px;}
- 
+
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:var(--white);font-family:'DM Mono',monospace;font-size:12px;padding:10px 20px;border-radius:30px;letter-spacing:1px;transition:transform .3s;z-index:1000;white-space:nowrap;border:1px solid #333;}
   .toast.show{transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
- 
+
 <!-- WHO ARE YOU? -->
 <div class="setup-screen" id="setup-screen">
   <div class="setup-title">Lowcountry Classic</div>
@@ -193,25 +193,25 @@
   <div class="name-grid" id="name-grid"></div>
   <button class="setup-continue" id="setup-continue" disabled onclick="finishSetup()">Let's Go →</button>
 </div>
- 
+
 <!-- LOADING -->
 <div class="loading-overlay hidden" id="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-text">Connecting to Firebase...</div>
 </div>
- 
+
 <!-- SYNC BAR -->
 <div class="sync-bar">
   <div><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connecting...</span></div>
   <div id="sync-who" style="color:#555;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
 </div>
- 
+
 <div class="header">
   <div class="header-eyebrow">Est. 2026 · Lowcountry, SC</div>
   <h1>Lowcountry Classic</h1>
   <div class="header-sub" id="header-sub">9 Players · 6 Rounds · Live Scoring</div>
 </div>
- 
+
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('leaderboard',this)">Leaderboard</button>
   <button class="nav-btn" onclick="showPage('scoring',this)">Scorecard</button>
@@ -220,7 +220,7 @@
   <button class="nav-btn" onclick="showPage('courses',this)">Courses</button>
   <button class="nav-btn" onclick="showPage('rules',this)">Rules</button>
 </nav>
- 
+
 <div id="page-leaderboard" class="page active">
   <div class="section-title">Leaderboard</div>
   <div class="section-sub">Live · updates automatically</div>
@@ -229,7 +229,7 @@
   <div class="section-sub">Combined team points</div>
   <div id="team-lb"></div>
 </div>
- 
+
 <div id="page-scoring" class="page">
   <div class="round-header">
     <div>
@@ -248,26 +248,26 @@
   <div id="scoring-content"></div>
   <button class="save-btn" id="save-btn" onclick="saveScores()">💾 Save & Sync to Everyone</button>
 </div>
- 
+
 <div id="page-chulligans" class="page">
   <div class="section-title">Chulligans</div>
   <div class="section-sub">1 per player per round</div>
   <div id="chulligan-content"></div>
 </div>
- 
+
 <div id="page-schedule" class="page">
   <div class="section-title">Schedule</div>
   <div class="section-sub">Full matchup draw</div>
   <div id="schedule-content"></div>
 </div>
- 
+
 <div id="page-courses" class="page">
   <div class="section-title">Courses</div>
   <div class="section-sub">Hole-by-hole · Par · Handicap · Yardage</div>
   <div class="course-tabs" id="course-tabs"></div>
   <div id="course-content"></div>
 </div>
- 
+
 <div id="page-rules" class="page">
   <div class="section-title">The Rules</div>
   <div class="section-sub">Know before you tee</div>
@@ -282,13 +282,13 @@
   <div class="section-sub">Handicaps & Teams</div>
   <div class="card" id="roster-card"></div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
- 
+
 <script>
 // ── STATIC DATA ───────────────────────────────────────────────────────────────
 const HOLES = 18;
- 
+
 const COURSES = [
   { id:'robbers-row', name:"Robber's Row", club:'Port Royal GC', day:'April 9 · AM', rating:72.6, slope:134, yards:6507,
     holes:[{par:4,hcp:5,yards:368},{par:3,hcp:15,yards:170},{par:5,hcp:13,yards:523},{par:4,hcp:3,yards:395},{par:4,hcp:7,yards:346},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:378},{par:4,hcp:9,yards:362},{par:5,hcp:1,yards:513},{par:4,hcp:10,yards:339},{par:5,hcp:2,yards:524},{par:4,hcp:6,yards:426},{par:4,hcp:8,yards:358},{par:3,hcp:16,yards:161},{par:5,hcp:12,yards:489},{par:3,hcp:18,yards:203},{par:4,hcp:14,yards:365},{par:4,hcp:4,yards:408}]},
@@ -301,10 +301,10 @@ const COURSES = [
   { id:'hills', name:'Hills Course', club:'Palmetto Hall', day:'April 11 · PM', rating:73.8, slope:139, yards:6918,
     holes:[{par:4,hcp:1,yards:438},{par:4,hcp:15,yards:395},{par:3,hcp:13,yards:192},{par:4,hcp:3,yards:437},{par:5,hcp:5,yards:490},{par:3,hcp:17,yards:191},{par:4,hcp:9,yards:397},{par:4,hcp:11,yards:382},{par:5,hcp:7,yards:546},{par:4,hcp:6,yards:398},{par:5,hcp:12,yards:526},{par:4,hcp:8,yards:378},{par:3,hcp:18,yards:158},{par:4,hcp:4,yards:442},{par:5,hcp:14,yards:521},{par:4,hcp:10,yards:403},{par:3,hcp:16,yards:190},{par:4,hcp:2,yards:434}]}
 ];
- 
+
 const ROUND_COURSE = ['robbers-row','barony','oyster-reef','cupp','hills','barony'];
 const getParForRound = ri => { const c=COURSES.find(x=>x.id===ROUND_COURSE[ri]); return c?c.holes.map(h=>h.par):[4,4,3,4,5,3,4,4,4,4,5,3,4,4,3,4,5,4]; };
- 
+
 const players = [
   {name:'Billy',    hcp:1.6,  team:1},
   {name:'Eric',     hcp:5.9,  team:3},
@@ -316,13 +316,13 @@ const players = [
   {name:'Dylan',    hcp:16.4, team:1},
   {name:'Peyton H', hcp:16.7, team:3},
 ];
- 
+
 const teams = [
   {id:1, name:'Team 1', members:['Billy','Peyton M','Dylan']},
   {id:2, name:'Team 2', members:['Anthony','Vince','Frank']},
   {id:3, name:'Team 3', members:['Eric','Willmore','Peyton H']},
 ];
- 
+
 const rounds = [
   {label:'Round 1', type:'match', matchups:[['Anthony','Billy','Eric'],['Vince','Peyton M','Willmore'],['Frank','Dylan','Peyton H']]},
   {label:'Round 2', type:'match', matchups:[['Anthony','Peyton M','Peyton H'],['Vince','Dylan','Eric'],['Frank','Billy','Willmore']]},
@@ -331,7 +331,7 @@ const rounds = [
   {label:'Round 5', type:'match', matchups:[['Anthony','Peyton M','Eric'],['Vince','Dylan','Willmore'],['Frank','Billy','Peyton H']]},
   {label:'Round 6', type:'match', matchups:[['Anthony','Billy','Willmore'],['Vince','Peyton M','Eric'],['Frank','Dylan','Peyton H']]},
 ];
- 
+
 // ── STATE ─────────────────────────────────────────────────────────────────────
 function defaultState() {
   const hs = {};
@@ -346,71 +346,141 @@ function defaultState() {
     updatedBy: null
   };
 }
- 
+
 function guardState(s) {
   if (!s) s = {};
-  if (!s.holeScores) { s.holeScores={}; }
+
+  // Firebase converts arrays to objects with numeric keys — convert back
+  function toArray(val, len, def) {
+    if (Array.isArray(val)) return val.length >= len ? val : [...val, ...Array(len - val.length).fill(def)];
+    if (val && typeof val === 'object') {
+      const arr = Array(len).fill(def);
+      Object.keys(val).forEach(k => { if (!isNaN(k) && +k < len) arr[+k] = val[+k] ?? def; });
+      return arr;
+    }
+    return Array(len).fill(def);
+  }
+
+  if (!s.holeScores) s.holeScores = {};
   players.forEach(p => {
-    if (!s.holeScores[p.name]) s.holeScores[p.name] = rounds.map(()=>Array(HOLES).fill(''));
-    rounds.forEach((_,ri) => {
-      if (!Array.isArray(s.holeScores[p.name][ri]) || s.holeScores[p.name][ri].length < HOLES)
-        s.holeScores[p.name][ri] = Array(HOLES).fill('');
-    });
+    if (!s.holeScores[p.name]) s.holeScores[p.name] = rounds.map(() => Array(HOLES).fill(''));
+    s.holeScores[p.name] = toArray(s.holeScores[p.name], rounds.length, null).map(arr =>
+      toArray(arr, HOLES, '')
+    );
   });
-  if (!s.scrambleHoles) s.scrambleHoles = rounds.map(r=>r.matchups.map(()=>Array(HOLES).fill('')));
+
+  if (!s.scrambleHoles) s.scrambleHoles = rounds.map(r => r.matchups.map(() => Array(HOLES).fill('')));
+  s.scrambleHoles = toArray(s.scrambleHoles, rounds.length, null).map((round, ri) =>
+    toArray(round, rounds[ri].matchups.length, null).map(arr => toArray(arr, HOLES, ''))
+  );
+
   if (!s.savedRounds) s.savedRounds = [];
-  if (!s.hammers) s.hammers = {1:null,2:null,3:null};
-  if (!s.chulligans) s.chulligans = rounds.map(()=>{const o={};players.forEach(p=>o[p.name]=false);return o;});
+  s.savedRounds = toArray(s.savedRounds, s.savedRounds?.length || 0, null).filter(v => v !== null);
+
+  if (!s.hammers) s.hammers = {1:null, 2:null, 3:null};
+
+  if (!s.chulligans) s.chulligans = rounds.map(() => { const o={}; players.forEach(p=>o[p.name]=false); return o; });
+  s.chulligans = toArray(s.chulligans, rounds.length, null).map(round => {
+    if (!round || typeof round !== 'object') { const o={}; players.forEach(p=>o[p.name]=false); return o; }
+    return round;
+  });
+
   return s;
 }
- 
+
 let S = defaultState();
 let currentUser = null;
 let dbRef = null;
 let firebaseReady = false;
- 
+
 // ── FIREBASE INIT ─────────────────────────────────────────────────────────────
 function initFirebase() {
   const isConfigured = FIREBASE_CONFIG.apiKey !== 'PASTE_YOUR_apiKey_HERE';
- 
+
   if (!isConfigured) {
-    // Run in offline/local mode
     setSyncStatus('offline', 'No Firebase — local only');
     try { const saved = localStorage.getItem('lc2026'); if (saved) S = guardState(JSON.parse(saved)); } catch(e){}
     return false;
   }
- 
+
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.database();
     dbRef = db.ref('lc2026/gameState');
- 
-    // Real-time listener — fires instantly on any change from any device
+
+    // Real-time listener — fires on ANY change from ANY device instantly
     dbRef.on('value', snapshot => {
       const data = snapshot.val();
       if (data) {
-        S = guardState(JSON.parse(data));
-        setSyncStatus('live', '🔴 Live');
-        updateSyncWho();
-        refreshCurrentPage();
+        try {
+          // Handle both string and object storage formats
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          S = guardState(parsed);
+          setSyncStatus('live', '🔴 Live');
+          updateSyncWho();
+          refreshCurrentPage();
+        } catch(e) {
+          console.warn('Parse error:', e);
+        }
       } else {
         setSyncStatus('live', '🔴 Live — no data yet');
       }
     }, err => {
-      setSyncStatus('offline', 'Connection error');
+      console.warn('Firebase listener error:', err);
+      setSyncStatus('offline', 'Connection error — retrying...');
+      // Retry connection after 3 seconds
+      setTimeout(() => initFirebaseListener(), 3000);
     });
- 
+
+    // Backup poll every 5 seconds in case the live listener misses anything
+    setInterval(async () => {
+      if (!dbRef || !firebaseReady) return;
+      try {
+        const snapshot = await dbRef.once('value');
+        const data = snapshot.val();
+        if (data) {
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          // Only update if remote is newer than what we have
+          if (!S.lastUpdated || (parsed.lastUpdated && parsed.lastUpdated > S.lastUpdated)) {
+            S = guardState(parsed);
+            setSyncStatus('live', '🔴 Live');
+            updateSyncWho();
+            refreshCurrentPage();
+          }
+        }
+      } catch(e) { /* silent fail on poll */ }
+    }, 5000);
+
     firebaseReady = true;
     return true;
   } catch(e) {
+    console.warn('Firebase init error:', e);
     setSyncStatus('offline', 'Firebase error');
     return false;
   }
 }
- 
+
+function initFirebaseListener() {
+  if (!dbRef) return;
+  dbRef.on('value', snapshot => {
+    const data = snapshot.val();
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        S = guardState(parsed);
+        setSyncStatus('live', '🔴 Live');
+        updateSyncWho();
+        refreshCurrentPage();
+      } catch(e) {}
+    }
+  }, err => {
+    setSyncStatus('offline', 'Connection error — retrying...');
+    setTimeout(() => initFirebaseListener(), 5000);
+  });
+}
+
 async function pushToFirebase() {
   if (!firebaseReady || !dbRef) {
-    // Fallback: localStorage
     try { localStorage.setItem('lc2026', JSON.stringify(S)); } catch(e){}
     return;
   }
@@ -418,13 +488,15 @@ async function pushToFirebase() {
   S.lastUpdated = Date.now();
   S.updatedBy = currentUser;
   try {
-    await dbRef.set(JSON.stringify(S));
+    // Store as plain object (not string) so Firebase live listener triggers reliably
+    await dbRef.set(JSON.parse(JSON.stringify(S)));
     setSyncStatus('live', '🔴 Live');
   } catch(e) {
+    console.warn('Push error:', e);
     setSyncStatus('offline', 'Sync failed — check connection');
   }
 }
- 
+
 // ── SYNC UI ───────────────────────────────────────────────────────────────────
 function setSyncStatus(status, label) {
   const dot = document.getElementById('sync-dot');
@@ -432,7 +504,7 @@ function setSyncStatus(status, label) {
   dot.className = 'sync-dot ' + status;
   lbl.textContent = label || status;
 }
- 
+
 function updateSyncWho() {
   const el = document.getElementById('sync-who');
   if (!S.lastUpdated) { el.textContent = '—'; return; }
@@ -440,7 +512,7 @@ function updateSyncWho() {
   const t = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   el.textContent = `${S.updatedBy || '?'} · ${t}`;
 }
- 
+
 function refreshCurrentPage() {
   const id = document.querySelector('.page.active')?.id?.replace('page-','');
   if (id==='leaderboard') renderLeaderboard();
@@ -448,7 +520,7 @@ function refreshCurrentPage() {
   if (id==='chulligans')  renderChulligans();
   if (id==='schedule')    renderSchedule();
 }
- 
+
 // ── SETUP: WHO ARE YOU? ───────────────────────────────────────────────────────
 function buildSetup() {
   const grid = document.getElementById('name-grid');
@@ -456,27 +528,27 @@ function buildSetup() {
     `<button class="name-btn" onclick="selectName('${p.name}',this)">${p.name}</button>`
   ).join('');
 }
- 
+
 function selectName(name, btn) {
   document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentUser = name;
   document.getElementById('setup-continue').disabled = false;
 }
- 
+
 function finishSetup() {
   if (!currentUser) return;
   document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('header-sub').textContent = `Playing as ${currentUser} · Live Scoring`;
   document.getElementById('loading-overlay').classList.remove('hidden');
   document.getElementById('loading-text').textContent = 'Connecting to Firebase...';
- 
+
   const ok = initFirebase();
   document.getElementById('loading-overlay').classList.add('hidden');
- 
+
   renderAll();
 }
- 
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const getP = n => players.find(p=>p.name===n);
 const pTeam = n => getP(n)?.team;
@@ -484,7 +556,7 @@ const grossOf = (name,ri) => S.holeScores[name][ri].reduce((s,v)=>s+(v===''?0:+v
 const filledOf = (name,ri) => S.holeScores[name][ri].filter(v=>v!=='').length;
 const grossScramble = (ri,mi) => S.scrambleHoles[ri][mi].reduce((s,v)=>s+(v===''?0:+v),0);
 const filledScramble = (ri,mi) => S.scrambleHoles[ri][mi].filter(v=>v!=='').length;
- 
+
 function computePlaces(matchup, ri) {
   const data = matchup.map(n => filledOf(n,ri)<HOLES ? null : {name:n, net:grossOf(n,ri)-getP(n).hcp});
   if (data.some(d=>d===null)) return null;
@@ -500,7 +572,7 @@ function scoreClass(g, par) {
   const d=+g-par;
   return d<=-2?'c-eagle':d===-1?'c-birdie':d===1?'c-bogey':d>=2?'c-double':'';
 }
- 
+
 // ── POINTS ────────────────────────────────────────────────────────────────────
 function allPoints() {
   const pts={}; players.forEach(p=>pts[p.name]=0);
@@ -520,7 +592,7 @@ function allPoints() {
   return pts;
 }
 function teamPoints(p){const t={};teams.forEach(tm=>t[tm.id]=tm.members.reduce((s,m)=>s+(p[m]||0),0));return t;}
- 
+
 // ── LEADERBOARD ───────────────────────────────────────────────────────────────
 function renderLeaderboard() {
   const pts=allPoints();
@@ -542,11 +614,11 @@ function renderLeaderboard() {
       </div></div>`;
   }).join('');
 }
- 
+
 // ── SCORING ───────────────────────────────────────────────────────────────────
 let activeGroup=0;
 function onRoundChange(){activeGroup=0;renderScoring();}
- 
+
 function renderScoring(){
   const ri=+document.getElementById('round-selector').value;
   document.getElementById('round-label').textContent=rounds[ri].label;
@@ -554,7 +626,7 @@ function renderScoring(){
   document.getElementById('round-course').textContent = course ? `${course.name} · ${course.club}` : '';
   rounds[ri].type==='scramble'?renderScramble(ri):renderMatch(ri);
 }
- 
+
 function scorecardTable(rows,isSaved,parArr){
   const hN=Array.from({length:HOLES},(_,i)=>i+1);
   const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
@@ -587,7 +659,7 @@ function scorecardTable(rows,isSaved,parArr){
   });
   return html+'</tbody></table></div>';
 }
- 
+
 function renderMatch(ri){
   const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
   const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
@@ -628,7 +700,7 @@ function renderMatch(ri){
     `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} · Hole-by-Hole</div><div style="display:flex;gap:6px;align-items:center">${hbtns}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
     res+(isSaved?`<div class="saved-notice">✓ Synced to all players</div>`:'');
 }
- 
+
 function renderScramble(ri){
   const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
   const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
@@ -661,10 +733,10 @@ function renderScramble(ri){
     `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Team ${mi+1} Scorecard${S.hammers[tid]===ri?' 🔨':''}</div><div style="display:flex;gap:6px;align-items:center">${hbtn}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
     res+(isSaved?`<div class="saved-notice">✓ Synced to all players</div>`:'');
 }
- 
+
 function setHole(name,ri,hi,val){S.holeScores[name][ri][hi]=val;}
 function setScrambleHole(ri,mi,hi,val){S.scrambleHoles[ri][mi][hi]=val;}
- 
+
 async function toggleHammer(tid,ri){
   if(S.hammers[tid]===ri) S.hammers[tid]=null;
   else if(S.hammers[tid]!==null){showToast(`Team ${tid} hammer already used on Round ${S.hammers[tid]+1}`);return;}
@@ -672,7 +744,7 @@ async function toggleHammer(tid,ri){
   await pushToFirebase();
   renderScoring(); renderSchedule();
 }
- 
+
 async function saveScores(){
   const ri=+document.getElementById('round-selector').value;
   const btn=document.getElementById('save-btn');
@@ -683,7 +755,7 @@ async function saveScores(){
   renderScoring(); renderLeaderboard();
   showToast(`Round ${ri+1} synced to all players! 🔴`);
 }
- 
+
 // ── CHULLIGANS ────────────────────────────────────────────────────────────────
 function renderChulligans(){
   document.getElementById('chulligan-content').innerHTML=rounds.map((round,ri)=>`
@@ -703,7 +775,7 @@ async function toggleChull(ri,name){
   await pushToFirebase();
   renderChulligans();
 }
- 
+
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
 function renderSchedule(){
   document.getElementById('schedule-content').innerHTML=rounds.map((round,ri)=>`
@@ -718,7 +790,7 @@ function renderSchedule(){
         </div>`).join('')}
     </div>`).join('');
 }
- 
+
 // ── COURSES ───────────────────────────────────────────────────────────────────
 let activeCourse=0;
 function renderCourses(){
@@ -761,7 +833,7 @@ function renderCourses(){
       🟡 Bold = top 9 hardest holes &nbsp;·&nbsp; <span style="color:#2563eb">Blue = Par 3</span> &nbsp;·&nbsp; <span style="color:var(--green)">Green = Par 5</span>
     </div>`;
 }
- 
+
 // ── ROSTER ────────────────────────────────────────────────────────────────────
 function renderRoster(){
   document.getElementById('roster-card').innerHTML=players.map(p=>`
@@ -771,9 +843,9 @@ function renderRoster(){
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Team ${p.team}</div>
     </div>`).join('');
 }
- 
+
 function renderAll(){renderLeaderboard();renderScoring();renderChulligans();renderRoster();renderCourses();}
- 
+
 // ── NAV ───────────────────────────────────────────────────────────────────────
 function showPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -787,14 +859,14 @@ function showPage(name,btn){
   if(name==='courses') renderCourses();
   if(name==='rules') renderRoster();
 }
- 
+
 // ── TOAST ─────────────────────────────────────────────────────────────────────
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3000);
 }
- 
+
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 buildSetup();
 </script>
