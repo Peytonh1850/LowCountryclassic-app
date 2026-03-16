@@ -421,12 +421,16 @@ function deepGuard(data) {
 
   const s = JSON.parse(JSON.stringify(data)); // deep clone
 
-  // Fix holeScores
+  // Fix holeScores — Firebase turns arrays into {0:val, 1:val} objects
   if (!s.holeScores) s.holeScores = {};
   players.forEach(p => {
     const raw = s.holeScores[p.name];
     const roundArr = fixArr(raw, rounds.length, null);
-    s.holeScores[p.name] = roundArr.map(r => fixArr(r, HOLES, ''));
+    s.holeScores[p.name] = roundArr.map(r => {
+      const holes = fixArr(r, HOLES, '');
+      // Ensure every element is a string (Firebase may coerce nulls)
+      return holes.map(v => (v === null || v === undefined) ? '' : String(v === 0 ? '' : v));
+    });
   });
 
   // Fix scrambleHoles
@@ -528,10 +532,11 @@ function finishSetup() {
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const getP = n => players.find(p=>p.name===n);
 const pTeam = n => getP(n)?.team;
-const grossOf = (name,ri) => S.holeScores[name][ri].reduce((s,v)=>s+(v===''?0:+v),0);
-const filledOf = (name,ri) => S.holeScores[name][ri].filter(v=>v!=='').length;
-const grossScramble = (ri,mi) => S.scrambleHoles[ri][mi].reduce((s,v)=>s+(v===''?0:+v),0);
-const filledScramble = (ri,mi) => S.scrambleHoles[ri][mi].filter(v=>v!=='').length;
+const safeArr = (arr) => Array.isArray(arr) ? arr : Array(HOLES).fill('');
+const grossOf = (name,ri) => safeArr(S.holeScores[name]?.[ri]).reduce((s,v)=>s+(v===''||v===null||v===undefined?0:+v),0);
+const filledOf = (name,ri) => safeArr(S.holeScores[name]?.[ri]).filter(v=>v!==''&&v!==null&&v!==undefined).length;
+const grossScramble = (ri,mi) => safeArr(S.scrambleHoles?.[ri]?.[mi]).reduce((s,v)=>s+(v===''||v===null||v===undefined?0:+v),0);
+const filledScramble = (ri,mi) => safeArr(S.scrambleHoles?.[ri]?.[mi]).filter(v=>v!==''&&v!==null&&v!==undefined).length;
 
 function computePlaces(matchup, ri) {
   const data = matchup.map(n => filledOf(n,ri)<HOLES ? null : {name:n, net:grossOf(n,ri)-getP(n).hcp});
@@ -781,11 +786,10 @@ async function saveScores(){
 }
 
 function renderMatch(ri){
+  try {
   const round=rounds[ri];
   const mi=activeGroup;
   const matchup=round.matchups[mi];
-
-  // Is currentUser in this group?
   const iAmInGroup = matchup.includes(currentUser);
 
   const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
@@ -798,6 +802,14 @@ function renderMatch(ri){
     if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) return `<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
     return `<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
   }).join('');
+
+  // Ensure holeScores are proper arrays before rendering
+  matchup.forEach(name => {
+    if (!Array.isArray(S.holeScores[name]?.[ri])) {
+      if (!S.holeScores[name]) S.holeScores[name] = rounds.map(()=>Array(HOLES).fill(''));
+      S.holeScores[name][ri] = Array(HOLES).fill('');
+    }
+  });
 
   const rows=matchup.map(name=>({
     name,
@@ -824,10 +836,9 @@ function renderMatch(ri){
         </div>`;}).join('');})()}
     </div>`:`<div id="results-block-${ri}-${mi}" style="display:none"></div>`;
 
-  // Edit/Save buttons — only shown if you're in this group
   const actionBtns = iAmInGroup ? `
     <div style="display:flex;gap:8px;margin-top:6px;">
-      ${!editMode?`<button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);" onclick="enterEditMode()">✏️ Edit My Scores</button>`:''}
+      ${!editMode?`<button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);" onclick="enterEditMode()">✏️ Edit Group Scores</button>`:''}
       ${editMode?`<button id="save-btn" class="save-btn" onclick="saveScores()">💾 Save & Sync</button>`:''}
     </div>` : `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your group</div>`;
 
@@ -835,13 +846,18 @@ function renderMatch(ri){
     gnav+
     `<div class="matchup-block">
       <div class="matchup-block-header">
-        <div class="matchup-block-title">Group ${mi+1} · ${round.label} ${iAmInGroup&&editMode?'<span style="color:var(--sand)">· ✏️ Editing</span>':''}</div>
+        <div class="matchup-block-title">Group ${mi+1} · ${round.label}${iAmInGroup&&editMode?' <span style="color:var(--sand)">· ✏️ Editing</span>':''}</div>
         <div style="display:flex;gap:6px;align-items:center">${hbtns}</div>
       </div>
       ${scorecardTable(rows,getParForRound(ri),ri,matchup)}
     </div>`+
     resHtml+
     actionBtns;
+
+  } catch(e) {
+    console.error('renderMatch error:', e);
+    document.getElementById('scoring-content').innerHTML=`<div class="card" style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px;padding:20px;">Error loading scorecard. Try refreshing.</div>`;
+  }
 }
 
 function renderScramble(ri){
