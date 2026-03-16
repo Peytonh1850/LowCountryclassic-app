@@ -683,7 +683,7 @@ function updateResultsBlock(ri, mi, matchup){
 }
 
 // Build the 18-hole input table
-function scorecardTable(rows, parArr, ri){
+function scorecardTable(rows, parArr, ri, matchup){
   const hN=Array.from({length:HOLES},(_,i)=>i+1);
   const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
   const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
@@ -699,16 +699,17 @@ function scorecardTable(rows, parArr, ri){
     <td class="divider">${ip}</td><td>${op+ip}</td><td>—</td>
   </tr>`;
 
+  const iAmInGroup = matchup.includes(currentUser);
+
   rows.forEach(row=>{
-    const isMe = row.name===currentUser;
-    const canEdit = matchup.includes(currentUser) && editMode;
+    const canEdit = iAmInGroup && editMode;
     const sc=row.scores;
     const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
     const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
     const tot=out+inn;
     const net=tot>0&&row.hcp!==undefined?(tot-row.hcp).toFixed(1):'—';
     const sid=row.name.replace(/\s/g,'_');
-    html+=`<tr style="${isMe?'background:#f6fbf6;':''}">
+    html+=`<tr>
       <td class="lft">${row.label}${row.sub?`<br><span style="font-size:10px;color:var(--muted)">${row.sub}</span>`:''}</td>
       ${sc.slice(0,9).map((v,hi)=>`
         <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}">
@@ -770,12 +771,10 @@ function enterEditMode(){
 async function saveScores(){
   const ri=+document.getElementById('round-selector').value;
   const btn=document.getElementById('save-btn');
-  const editBtn=document.getElementById('edit-btn');
-  btn.disabled=true; btn.textContent='Saving...';
+  if(btn){ btn.disabled=true; btn.textContent='Saving...'; }
   editMode=false;
   if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
   await pushToFirebase();
-  btn.disabled=false;
   renderScoring();
   renderLeaderboard();
   showToast(`Round ${ri+1} saved & synced! 🔴`);
@@ -839,7 +838,7 @@ function renderMatch(ri){
         <div class="matchup-block-title">Group ${mi+1} · ${round.label} ${iAmInGroup&&editMode?'<span style="color:var(--sand)">· ✏️ Editing</span>':''}</div>
         <div style="display:flex;gap:6px;align-items:center">${hbtns}</div>
       </div>
-      ${scorecardTable(rows,getParForRound(ri),ri)}
+      ${scorecardTable(rows,getParForRound(ri),ri,matchup)}
     </div>`+
     resHtml+
     actionBtns;
