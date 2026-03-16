@@ -347,46 +347,6 @@ function defaultState() {
   };
 }
 
-function guardState(s) {
-  if (!s) s = {};
-
-  // Firebase converts arrays to objects with numeric keys — convert back
-  function toArray(val, len, def) {
-    if (Array.isArray(val)) return val.length >= len ? val : [...val, ...Array(len - val.length).fill(def)];
-    if (val && typeof val === 'object') {
-      const arr = Array(len).fill(def);
-      Object.keys(val).forEach(k => { if (!isNaN(k) && +k < len) arr[+k] = val[+k] ?? def; });
-      return arr;
-    }
-    return Array(len).fill(def);
-  }
-
-  if (!s.holeScores) s.holeScores = {};
-  players.forEach(p => {
-    if (!s.holeScores[p.name]) s.holeScores[p.name] = rounds.map(() => Array(HOLES).fill(''));
-    s.holeScores[p.name] = toArray(s.holeScores[p.name], rounds.length, null).map(arr =>
-      toArray(arr, HOLES, '')
-    );
-  });
-
-  if (!s.scrambleHoles) s.scrambleHoles = rounds.map(r => r.matchups.map(() => Array(HOLES).fill('')));
-  s.scrambleHoles = toArray(s.scrambleHoles, rounds.length, null).map((round, ri) =>
-    toArray(round, rounds[ri].matchups.length, null).map(arr => toArray(arr, HOLES, ''))
-  );
-
-  if (!s.savedRounds) s.savedRounds = [];
-  s.savedRounds = toArray(s.savedRounds, s.savedRounds?.length || 0, null).filter(v => v !== null);
-
-  if (!s.hammers) s.hammers = {1:null, 2:null, 3:null};
-
-  if (!s.chulligans) s.chulligans = rounds.map(() => { const o={}; players.forEach(p=>o[p.name]=false); return o; });
-  s.chulligans = toArray(s.chulligans, rounds.length, null).map(round => {
-    if (!round || typeof round !== 'object') { const o={}; players.forEach(p=>o[p.name]=false); return o; }
-    return round;
-  });
-
-  return s;
-}
 
 let S = defaultState();
 let currentUser = null;
@@ -396,10 +356,8 @@ let firebaseReady = false;
 // ── FIREBASE INIT ─────────────────────────────────────────────────────────────
 function initFirebase() {
   const isConfigured = FIREBASE_CONFIG.apiKey !== 'PASTE_YOUR_apiKey_HERE';
-
   if (!isConfigured) {
-    setSyncStatus('offline', 'No Firebase — local only');
-    try { const saved = localStorage.getItem('lc2026'); if (saved) S = guardState(JSON.parse(saved)); } catch(e){}
+    setSyncStatus('offline', 'Offline mode');
     return false;
   }
 
@@ -407,93 +365,107 @@ function initFirebase() {
     firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.database();
     dbRef = db.ref('lc2026/gameState');
+    firebaseReady = true;
 
-    // Real-time listener — fires on ANY change from ANY device instantly
-    dbRef.on('value', snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        try {
-          // Handle both string and object storage formats
-          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-          S = guardState(parsed);
-          setSyncStatus('live', '🔴 Live');
-          updateSyncWho();
-          refreshCurrentPage();
-        } catch(e) {
-          console.warn('Parse error:', e);
-        }
-      } else {
-        setSyncStatus('live', '🔴 Live — no data yet');
-      }
-    }, err => {
-      console.warn('Firebase listener error:', err);
-      setSyncStatus('offline', 'Connection error — retrying...');
-      // Retry connection after 3 seconds
-      setTimeout(() => initFirebaseListener(), 3000);
-    });
-
-    // Backup poll every 5 seconds in case the live listener misses anything
-    setInterval(async () => {
-      if (!dbRef || !firebaseReady) return;
-      try {
-        const snapshot = await dbRef.once('value');
+    // Live listener — triggers instantly on any write from any device
+    dbRef.on('value',
+      snapshot => {
         const data = snapshot.val();
-        if (data) {
-          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-          // Only update if remote is newer than what we have
-          if (!S.lastUpdated || (parsed.lastUpdated && parsed.lastUpdated > S.lastUpdated)) {
-            S = guardState(parsed);
-            setSyncStatus('live', '🔴 Live');
+        setSyncStatus('live', '🔴 Live');
+        if (!data) return;
+        try {
+          const incoming = deepGuard(data);
+          // Only apply if newer than what we have locally
+          if (!S.lastUpdated || !incoming.lastUpdated || incoming.lastUpdated >= S.lastUpdated) {
+            S = incoming;
             updateSyncWho();
             refreshCurrentPage();
           }
-        }
-      } catch(e) { /* silent fail on poll */ }
-    }, 5000);
+        } catch(e) { console.warn('Sync parse error', e); }
+      },
+      err => {
+        console.warn('Firebase error', err);
+        setSyncStatus('offline', 'Connection lost — retrying');
+        setTimeout(initFirebase, 4000);
+      }
+    );
 
-    firebaseReady = true;
     return true;
   } catch(e) {
-    console.warn('Firebase init error:', e);
+    console.warn('Firebase init failed', e);
     setSyncStatus('offline', 'Firebase error');
     return false;
   }
 }
 
-function initFirebaseListener() {
-  if (!dbRef) return;
-  dbRef.on('value', snapshot => {
-    const data = snapshot.val();
-    if (data) {
-      try {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        S = guardState(parsed);
-        setSyncStatus('live', '🔴 Live');
-        updateSyncWho();
-        refreshCurrentPage();
-      } catch(e) {}
+// Deep-convert Firebase objects back to proper JS arrays/values
+function deepGuard(data) {
+  function fixArr(val, len, def) {
+    if (!val) return Array(len).fill(def);
+    if (Array.isArray(val)) {
+      const a = [...val];
+      while (a.length < len) a.push(def);
+      return a;
     }
-  }, err => {
-    setSyncStatus('offline', 'Connection error — retrying...');
-    setTimeout(() => initFirebaseListener(), 5000);
+    if (typeof val === 'object') {
+      const a = Array(len).fill(def);
+      Object.keys(val).forEach(k => { if (!isNaN(+k)) a[+k] = val[k] ?? def; });
+      return a;
+    }
+    return Array(len).fill(def);
+  }
+
+  const s = JSON.parse(JSON.stringify(data)); // deep clone
+
+  // Fix holeScores
+  if (!s.holeScores) s.holeScores = {};
+  players.forEach(p => {
+    const raw = s.holeScores[p.name];
+    const roundArr = fixArr(raw, rounds.length, null);
+    s.holeScores[p.name] = roundArr.map(r => fixArr(r, HOLES, ''));
   });
+
+  // Fix scrambleHoles
+  const sh = fixArr(s.scrambleHoles, rounds.length, null);
+  s.scrambleHoles = sh.map((round, ri) => {
+    const r = fixArr(round, rounds[ri].matchups.length, null);
+    return r.map(m => fixArr(m, HOLES, ''));
+  });
+
+  // Fix savedRounds
+  const sr = s.savedRounds;
+  if (!sr) s.savedRounds = [];
+  else if (!Array.isArray(sr)) s.savedRounds = Object.values(sr).filter(v => v !== null && v !== undefined);
+
+  // Fix hammers
+  if (!s.hammers) s.hammers = {1:null,2:null,3:null};
+
+  // Fix chulligans
+  const ch = fixArr(s.chulligans, rounds.length, null);
+  s.chulligans = ch.map(r => {
+    if (!r || typeof r !== 'object') { const o={}; players.forEach(p=>o[p.name]=false); return o; }
+    return r;
+  });
+
+  return s;
 }
 
 async function pushToFirebase() {
   if (!firebaseReady || !dbRef) {
     try { localStorage.setItem('lc2026', JSON.stringify(S)); } catch(e){}
+    setSyncStatus('offline', 'Saved locally only');
     return;
   }
-  setSyncStatus('syncing', 'Syncing...');
+  setSyncStatus('syncing', 'Saving...');
   S.lastUpdated = Date.now();
   S.updatedBy = currentUser;
   try {
-    // Store as plain object (not string) so Firebase live listener triggers reliably
     await dbRef.set(JSON.parse(JSON.stringify(S)));
     setSyncStatus('live', '🔴 Live');
+    console.log('✅ Pushed to Firebase at', new Date().toLocaleTimeString());
   } catch(e) {
-    console.warn('Push error:', e);
-    setSyncStatus('offline', 'Sync failed — check connection');
+    console.warn('Push failed:', e);
+    setSyncStatus('offline', 'Save failed — tap again');
   }
 }
 
