@@ -701,7 +701,7 @@ function scorecardTable(rows, parArr, ri){
 
   rows.forEach(row=>{
     const isMe = row.name===currentUser;
-    const canEdit = isMe && editMode;
+    const canEdit = matchup.includes(currentUser) && editMode;
     const sc=row.scores;
     const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
     const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
@@ -709,9 +709,7 @@ function scorecardTable(rows, parArr, ri){
     const net=tot>0&&row.hcp!==undefined?(tot-row.hcp).toFixed(1):'—';
     const sid=row.name.replace(/\s/g,'_');
     html+=`<tr style="${isMe?'background:#f6fbf6;':''}">
-      <td class="lft">${row.label}${row.sub?`<br><span style="font-size:10px;color:var(--muted)">${row.sub}</span>`:''}
-        ${isMe?`<br><span style="font-size:9px;font-family:'DM Mono',monospace;color:${canEdit?'var(--green)':'var(--muted)'};">${canEdit?'✏️ editing':'🔒 locked'}</span>`:''}
-      </td>
+      <td class="lft">${row.label}${row.sub?`<br><span style="font-size:10px;color:var(--muted)">${row.sub}</span>`:''}</td>
       ${sc.slice(0,9).map((v,hi)=>`
         <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}">
           <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
@@ -838,7 +836,7 @@ function renderMatch(ri){
     gnav+
     `<div class="matchup-block">
       <div class="matchup-block-header">
-        <div class="matchup-block-title">Group ${mi+1} · ${round.label}</div>
+        <div class="matchup-block-title">Group ${mi+1} · ${round.label} ${iAmInGroup&&editMode?'<span style="color:var(--sand)">· ✏️ Editing</span>':''}</div>
         <div style="display:flex;gap:6px;align-items:center">${hbtns}</div>
       </div>
       ${scorecardTable(rows,getParForRound(ri),ri)}
