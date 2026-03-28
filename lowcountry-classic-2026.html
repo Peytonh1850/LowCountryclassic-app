@@ -163,14 +163,14 @@
   .roster-row:last-child{border-bottom:none;}
   .roster-hcp{font-family:'DM Mono',monospace;font-size:12px;color:var(--green);background:var(--green-pale);padding:3px 10px;border-radius:10px;}
 
-  /* SETUP SCREEN */
-  .setup-screen{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px;gap:16px;}
+  .setup-screen{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px;gap:20px;}
   .setup-screen.hidden{display:none;}
-  .setup-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--white);text-align:center;}
-  .setup-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;}
-  .name-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:340px;}
-  .name-btn{padding:12px 8px;border-radius:8px;border:1.5px solid #333;background:#222;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;text-align:center;}
-  .name-btn:hover,.name-btn.selected{background:var(--green);color:var(--white);border-color:var(--green);}
+  .setup-title{font-family:'Playfair Display',serif;font-size:30px;font-weight:900;color:var(--white);text-align:center;}
+  .setup-sub{font-family:'DM Mono',monospace;font-size:12px;color:var(--sand);letter-spacing:3px;text-align:center;text-transform:uppercase;}
+  .name-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:360px;}
+  .name-btn{padding:14px 8px;border-radius:10px;border:1.5px solid rgba(200,169,110,.4);background:rgba(255,255,255,.07);color:var(--white);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;transition:all .2s;text-align:center;letter-spacing:.5px;}
+  .name-btn:hover{background:rgba(200,169,110,.2);border-color:var(--sand);}
+  .name-btn.selected{background:var(--green);color:var(--white);border-color:var(--green);font-weight:700;}
   .setup-continue{padding:14px 32px;background:var(--sand);color:var(--dark);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;margin-top:8px;}
   .setup-continue:disabled{background:#333;color:#666;cursor:not-allowed;}
 
@@ -770,7 +770,7 @@ function updateResultsBlock(ri, mi, matchup){
   const isFinal = S.finalRounds?.includes(ri);
   const bm=[2,1,0];
   el.innerHTML=
-    `<div class="matchup-block-header" style="background:${isFinal?'#1a4a15':''};">
+    `<div class="matchup-block-header" style="${isFinal ? 'background:#1a4a15;' : ''}">
       <div class="matchup-block-title">Group ${mi+1} Results ${isFinal?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
     </div>`+
     placed.map((name,rank)=>{
@@ -940,8 +940,7 @@ async function saveScores(){
 }
 
 async function endRound(ri){
-  const round = rounds[ri];
-  const confirmed = confirm(`🏁 End Round ${ri+1} and lock in points?\n\nThis will finalize all scores and award points to the leaderboard. Scores can still be edited but points won't change.\n\nPress OK to confirm.`);
+  const confirmed = confirm(`🏁 End Round ${ri+1} and lock in points?\n\nThis awards points to the leaderboard. You can still reopen the round to fix scores if needed.\n\nPress OK to confirm.`);
   if (!confirmed) return;
   if (!S.finalRounds) S.finalRounds = [];
   if (!S.finalRounds.includes(ri)) S.finalRounds.push(ri);
@@ -950,6 +949,23 @@ async function endRound(ri){
   renderScoring();
   renderLeaderboard();
   showToast(`🏁 Round ${ri+1} finalized! Points awarded.`);
+}
+
+async function reopenRound(ri){
+  const confirmed = confirm(`🔓 Reopen Round ${ri+1}?\n\nThis will remove the awarded points until you End the Round again.\n\nPress OK to confirm.`);
+  if (!confirmed) return;
+  if (!S.finalRounds) S.finalRounds = [];
+  S.finalRounds = S.finalRounds.filter(r => r !== ri);
+  editMode = true;
+  await pushToFirebase();
+  renderScoring();
+  renderLeaderboard();
+  showToast(`🔓 Round ${ri+1} reopened — scores unlocked.`);
+}
+
+function cancelEdit(){
+  editMode = false;
+  renderScoring();
 }
 
 function renderMatch(ri){
@@ -998,8 +1014,8 @@ function renderMatch(ri){
 
   const resHtml = placed ? `
     <div class="matchup-block" id="results-block-${ri}-${mi}" style="margin-top:12px;">
-      <div class="matchup-block-header" style="background:${isFinal?'#1a4a15':'';}">
-        <div class="matchup-block-title">Group ${mi+1} Results ${isFinal?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
+      <div class="matchup-block-header" style="${isFinal ? 'background:#1a4a15;' : ''}">
+        <div class="matchup-block-title">Group ${mi+1} Results ${isFinal ? '<span style=\"color:#4ade80\">· ✅ Final</span>' : ''}</div>
       </div>
       ${(()=>{const bm=[2,1,0];return placed.map((name,rank)=>{
         const mult=S.hammers[pTeam(name)]===ri?2:1;const ep=bm[rank]*mult;
@@ -1013,21 +1029,38 @@ function renderMatch(ri){
         </div>`;}).join('');})()}
     </div>` : `<div id="results-block-${ri}-${mi}" style="display:none"></div>`;
 
-  // Action buttons — only for group members
-  // Once finalized: no more editing, no more saving
+  // Action buttons — group members + admin override
   let actionBtns = '';
-  if (iAmInGroup) {
+  if (iAmInGroup || editMode) {
     if (isFinal) {
-      actionBtns = `<div style="text-align:center;padding:12px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>`;
+      actionBtns = `
+        <div style="text-align:center;padding:10px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Round to Edit</button>
+        </div>`;
+    } else if (editMode) {
+      actionBtns = `
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="cancelEdit()">✕ Cancel</button>
+          <button id="save-btn" class="save-btn" style="flex:2;" onclick="saveScores()">💾 Save & Sync</button>
+        </div>`;
     } else {
-      actionBtns = `<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-        ${!editMode ? `<button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Group Scores</button>` : ''}
-        ${editMode ? `<button id="save-btn" class="save-btn" style="flex:1;" onclick="saveScores()">💾 Save & Sync</button>` : ''}
-        ${placed && !editMode ? `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>` : ''}
-      </div>`;
+      actionBtns = `
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Scores</button>
+          ${placed ? `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>` : ''}
+        </div>`;
     }
   } else {
-    actionBtns = `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your group</div>`;
+    // Not in group — show view-only notice but offer override edit button
+    actionBtns = `
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:6px;">👁 Not your group</div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        ${isFinal
+          ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Round to Edit</button>`
+          : `<button class="save-btn" style="background:transparent;border:1.5px solid var(--sand);color:var(--sand);flex:1;font-size:11px;" onclick="enterEditMode()">✏️ Edit This Group's Scores</button>`
+        }
+      </div>`;
   }
 
   document.getElementById('scoring-content').innerHTML=
@@ -1109,7 +1142,7 @@ function renderScramble(ri){
   const placed=S.savedRounds.includes(ri)?computeScramblePlaces(ri):null;
   const resHtml=placed?`
     <div class="matchup-block" style="margin-top:12px;">
-      <div class="matchup-block-header" style="background:${isFinalS?'#1a4a15':''};">
+      <div class="matchup-block-header" style="${isFinalS ? 'background:#1a4a15;' : ''}">
         <div class="matchup-block-title">Scramble Results ${isFinalS?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
       </div>
       ${(()=>{const bm=[2,1,0];return placed.map((mIdx,rank)=>{
@@ -1124,18 +1157,35 @@ function renderScramble(ri){
     </div>`:'';
 
   let actionBtns = '';
-  if (isMyTeam) {
+  if (isMyTeam || editMode) {
     if (isFinalS) {
-      actionBtns = `<div style="text-align:center;padding:12px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>`;
+      actionBtns = `
+        <div style="text-align:center;padding:10px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Round to Edit</button>
+        </div>`;
+    } else if (editMode) {
+      actionBtns = `
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="cancelEdit()">✕ Cancel</button>
+          <button id="save-btn" class="save-btn" style="flex:2;" onclick="saveScores()">💾 Save & Sync</button>
+        </div>`;
     } else {
-      actionBtns = `<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-        ${!editMode?`<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Team Scores</button>`:''}
-        ${editMode?`<button id="save-btn" class="save-btn" style="flex:1;" onclick="saveScores()">💾 Save & Sync</button>`:''}
-        ${placed && !editMode?`<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>`:''}
-      </div>`;
+      actionBtns = `
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Team Scores</button>
+          ${placed ? `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>` : ''}
+        </div>`;
     }
   } else {
-    actionBtns = `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your team</div>`;
+    actionBtns = `
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:6px;">👁 Not your team</div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        ${isFinalS
+          ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Round to Edit</button>`
+          : `<button class="save-btn" style="background:transparent;border:1.5px solid var(--sand);color:var(--sand);flex:1;font-size:11px;" onclick="enterEditMode()">✏️ Edit This Team's Scores</button>`
+        }
+      </div>`;
   }
 
   document.getElementById('scoring-content').innerHTML=
