@@ -5,6 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lowcountry Classic 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     🔥 FIREBASE CONFIG — PASTE YOUR VALUES BELOW
+     
+     1. Go to console.firebase.google.com
+     2. Create a project → Add a web app
+     3. Copy the firebaseConfig object values into the fields below
+     ============================================================ -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyCKXODf2nS8axd_ZfynGqkWmlkj1ppZ0N4",
+    authDomain:        "lowcountry-classic.firebaseapp.com",
+    databaseURL:       "https://lowcountry-classic-default-rtdb.firebaseio.com",
+    projectId:         "lowcountry-classic",
+    storageBucket:     "lowcountry-classic.firebasestorage.app",
+    messagingSenderId: "37947198654",
+    appId:             "1:37947198654:web:af1beeb1eb721babdf62ef"
+  };
+</script>
+<!-- ============================================================ -->
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
   :root {
     --green:#2d5a27; --green-light:#3d7a35; --green-pale:#e8f0e6;
@@ -20,6 +45,7 @@
   .sync-dot{width:7px;height:7px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;transition:background .4s;}
   .sync-dot.live{background:#4ade80;box-shadow:0 0 6px #4ade80;}
   .sync-dot.syncing{background:var(--sand);animation:pulse .8s infinite;}
+  .sync-dot.offline{background:#ef4444;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 
   .header{background:var(--green);padding:20px 20px 16px;text-align:center;position:relative;overflow:hidden;}
@@ -36,7 +62,6 @@
 
   .page{display:none;padding:14px;max-width:820px;margin:0 auto;}
   .page.active{display:block;}
-
   .section-title{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--green);margin-bottom:3px;}
   .section-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
   .card{background:var(--white);border-radius:10px;padding:15px;margin-bottom:12px;border:1px solid #e8e4db;box-shadow:0 1px 4px rgba(0,0,0,.06);}
@@ -61,20 +86,18 @@
   .round-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
   .round-label{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;}
   .round-select{font-family:'DM Mono',monospace;font-size:11px;padding:6px 10px;border:1.5px solid #ddd;border-radius:6px;background:var(--white);cursor:pointer;color:var(--dark);}
-
   .group-nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
   .group-nav-btn{flex:1;min-width:80px;padding:7px 5px;border-radius:8px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);text-align:center;line-height:1.4;}
   .group-nav-btn.active{background:var(--green);color:var(--white);border-color:var(--green);}
   .group-nav-btn.done{border-color:var(--green);color:var(--green);}
   .group-nav-btn.done.active{background:var(--green);color:var(--white);}
-
   .matchup-block{background:var(--white);border:1px solid #e8e4db;border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
   .matchup-block-header{background:var(--green);padding:10px 15px;display:flex;align-items:center;justify-content:space-between;}
   .matchup-block-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--sand-light);text-transform:uppercase;}
   .hammer-btn{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--sand);background:transparent;color:var(--sand);cursor:pointer;transition:all .2s;letter-spacing:1px;}
   .hammer-btn.active{background:var(--sand);color:var(--dark);}
 
-  /* SCORECARD */
+  /* SCORECARD TABLE */
   .sc-wrap{overflow-x:auto;}
   table.sc{width:100%;border-collapse:collapse;min-width:600px;}
   table.sc th{background:var(--green);color:var(--sand-light);font-family:'DM Mono',monospace;font-size:10px;padding:7px 3px;text-align:center;white-space:nowrap;}
@@ -85,26 +108,24 @@
   table.sc tr.par-row td{background:#f7f4ee;font-size:10px;color:var(--muted);}
   table.sc tr:last-child td{border-bottom:none;}
   table.sc td.divider,table.sc th.divider{border-left:2px solid #ccc;}
-
-  .hi{width:28px;font-family:'DM Mono',monospace;font-size:12px;text-align:center;padding:3px 1px;border:1px solid #ddd;border-radius:4px;background:var(--cream);color:var(--dark);-moz-appearance:textfield;}
+  .hi{width:26px;font-family:'DM Mono',monospace;font-size:11px;text-align:center;padding:2px 1px;border:1px solid #ddd;border-radius:3px;background:var(--cream);color:var(--dark);-moz-appearance:textfield;}
   .hi::-webkit-outer-spin-button,.hi::-webkit-inner-spin-button{-webkit-appearance:none;}
   .hi:focus{outline:none;border-color:var(--green);background:var(--white);}
   .hi.ro{background:#f5f5f5;color:#aaa;border-color:#eee;}
-
+  table.sc td{padding:3px 2px;text-align:center;border-bottom:1px solid #f5f2eb;font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle;}
   .c-eagle{background:#bfdbfe!important;color:#1d4ed8!important;border-radius:50%;}
   .c-birdie{background:#dbeafe!important;color:#2563eb!important;}
   .c-bogey{background:#fee2e2!important;color:#dc2626!important;}
   .c-double{background:#fca5a5!important;color:#b91c1c!important;border-radius:50%;}
-
   .result-row{display:flex;align-items:center;gap:10px;padding:10px 15px;border-top:1px solid #f0ece3;}
   .place-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;flex-shrink:0;}
   .p1{background:#fff4cc;color:var(--gold);border:1.5px solid var(--gold);}
   .p2{background:#f0f0f0;color:var(--mid);border:1.5px solid #aaa;}
   .p3{background:#fce8e6;color:var(--red);border:1.5px solid var(--red);}
   .badge-hammer{font-family:'DM Mono',monospace;font-size:9px;background:var(--sand);color:var(--dark);padding:2px 7px;border-radius:10px;letter-spacing:1px;}
-
   .save-btn{width:100%;padding:13px;background:var(--green);color:var(--white);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-top:4px;transition:background .2s;}
   .save-btn:hover{background:var(--green-light);}
+  .save-btn:disabled{background:#aaa;cursor:not-allowed;}
   .saved-notice{text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);padding:8px;}
 
   /* CHULLIGANS */
@@ -121,7 +142,7 @@
   .course-stat{background:var(--white);border:1px solid #e8e4db;border-radius:8px;padding:9px 12px;flex:1;min-width:70px;text-align:center;}
   .course-stat-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--green);}
   .course-stat-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
-  table.csc{width:100%;border-collapse:collapse;min-width:400px;font-family:'DM Mono',monospace;}
+  table.csc{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;}
   table.csc th{background:var(--green);color:var(--sand-light);font-size:10px;padding:7px 8px;text-align:center;}
   table.csc th.lft{text-align:left;padding-left:12px;}
   table.csc td{padding:6px 8px;text-align:center;border-bottom:1px solid #f5f2eb;font-size:12px;}
@@ -142,34 +163,54 @@
   .roster-row:last-child{border-bottom:none;}
   .roster-hcp{font-family:'DM Mono',monospace;font-size:12px;color:var(--green);background:var(--green-pale);padding:3px 10px;border-radius:10px;}
 
-  /* OVERLAY */
-  .loading-overlay{position:fixed;inset:0;background:rgba(26,26,24,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px;}
+  /* SETUP SCREEN */
+  .setup-screen{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px;gap:16px;}
+  .setup-screen.hidden{display:none;}
+  .setup-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--white);text-align:center;}
+  .setup-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;}
+  .name-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:340px;}
+  .name-btn{padding:12px 8px;border-radius:8px;border:1.5px solid #333;background:#222;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;text-align:center;}
+  .name-btn:hover,.name-btn.selected{background:var(--green);color:var(--white);border-color:var(--green);}
+  .setup-continue{padding:14px 32px;background:var(--sand);color:var(--dark);border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;margin-top:8px;}
+  .setup-continue:disabled{background:#333;color:#666;cursor:not-allowed;}
+
+  /* LOADING */
+  .loading-overlay{position:fixed;inset:0;background:rgba(26,26,24,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:998;gap:14px;}
   .loading-overlay.hidden{display:none;}
-  .loading-spinner{width:36px;height:36px;border:3px solid rgba(200,169,110,.2);border-top-color:var(--sand);border-radius:50%;animation:spin .8s linear infinite;}
+  .spinner{width:34px;height:34px;border:3px solid rgba(200,169,110,.2);border-top-color:var(--sand);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--sand-light);letter-spacing:1px;}
 
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:var(--white);font-family:'DM Mono',monospace;font-size:12px;padding:10px 20px;border-radius:30px;letter-spacing:1px;transition:transform .3s;z-index:1000;white-space:nowrap;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:var(--white);font-family:'DM Mono',monospace;font-size:12px;padding:10px 20px;border-radius:30px;letter-spacing:1px;transition:transform .3s;z-index:1000;white-space:nowrap;border:1px solid #333;}
   .toast.show{transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
 
-<!-- Loading overlay -->
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">Connecting to live game...</div>
+<!-- WHO ARE YOU? -->
+<div class="setup-screen" id="setup-screen">
+  <div class="setup-title">Lowcountry Classic</div>
+  <div class="setup-sub">WHO ARE YOU?</div>
+  <div class="name-grid" id="name-grid"></div>
+  <button class="setup-continue" id="setup-continue" disabled onclick="finishSetup()">Let's Go →</button>
 </div>
 
+<!-- LOADING -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Connecting to Firebase...</div>
+</div>
+
+<!-- SYNC BAR -->
 <div class="sync-bar">
   <div><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connecting...</span></div>
-  <div id="last-updated" style="color:#555">—</div>
+  <div id="sync-who" style="color:#555;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
 </div>
 
 <div class="header">
   <div class="header-eyebrow">Est. 2026 · Lowcountry, SC</div>
   <h1>Lowcountry Classic</h1>
-  <div class="header-sub">9 Players · 6 Rounds · Live Scoring</div>
+  <div class="header-sub" id="header-sub">9 Players · 6 Rounds · Live Scoring</div>
 </div>
 
 <nav class="nav">
@@ -183,8 +224,8 @@
 
 <div id="page-leaderboard" class="page active">
   <div class="section-title">Leaderboard</div>
-  <div class="section-sub">Live individual standings</div>
-  <div class="card" id="individual-lb"><div style="text-align:center;padding:20px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;">Loading...</div></div>
+  <div class="section-sub">Live · updates automatically</div>
+  <div class="card" id="individual-lb"><div style="text-align:center;padding:20px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;">Loading scores...</div></div>
   <div class="section-title" style="margin-top:8px;">Team Standings</div>
   <div class="section-sub">Combined team points</div>
   <div id="team-lb"></div>
@@ -192,7 +233,10 @@
 
 <div id="page-scoring" class="page">
   <div class="round-header">
-    <div class="round-label" id="round-label">Round 1</div>
+    <div>
+      <div class="round-label" id="round-label">Round 1</div>
+      <div id="round-course" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.5px;"></div>
+    </div>
     <select class="round-select" id="round-selector" onchange="onRoundChange()">
       <option value="0">Round 1</option>
       <option value="1">Round 2</option>
@@ -203,7 +247,6 @@
     </select>
   </div>
   <div id="scoring-content"></div>
-  <button class="save-btn" onclick="saveScores()">Save & Sync Round</button>
 </div>
 
 <div id="page-chulligans" class="page">
@@ -229,11 +272,11 @@
   <div class="section-title">The Rules</div>
   <div class="section-sub">Know before you tee</div>
   <div class="card">
-    <div class="rule-item"><div class="rule-icon">🏌️</div><div class="rule-text"><strong>Format:</strong> 3-player matchups scored hole-by-hole. Low <strong>net score</strong> wins. Round 4 is a scramble — lowest <strong>gross</strong> wins.</div></div>
+    <div class="rule-item"><div class="rule-icon">🏌️</div><div class="rule-text"><strong>Format:</strong> 3-player matchups, hole-by-hole. Low <strong>net score</strong> wins. Round 4 scramble = lowest <strong>gross</strong> wins.</div></div>
     <div class="rule-item"><div class="rule-icon">🥇</div><div class="rule-text"><strong>Points:</strong> 1st = <strong>2 pts</strong>, 2nd = <strong>1 pt</strong>, 3rd = <strong>0 pts</strong>.</div></div>
-    <div class="rule-item"><div class="rule-icon">🔨</div><div class="rule-text"><strong>Hammer:</strong> Each team can hammer 1 round. Their points double that round (4/2/0). One use per team, whole trip.</div></div>
-    <div class="rule-item"><div class="rule-icon">⛳</div><div class="rule-text"><strong>Chulligan:</strong> 1 per player per round. Use on any shot.</div></div>
-    <div class="rule-item"><div class="rule-icon">🔄</div><div class="rule-text"><strong>Live Sync:</strong> Scores update in real time for all players. Hit "Save & Sync" after entering a round to push to everyone.</div></div>
+    <div class="rule-item"><div class="rule-icon">🔨</div><div class="rule-text"><strong>Hammer:</strong> Each team hammers 1 round. Their points double (4/2/0). One use per team.</div></div>
+    <div class="rule-item"><div class="rule-icon">⛳</div><div class="rule-text"><strong>Chulligan:</strong> 1 per player per round, any shot.</div></div>
+    <div class="rule-item"><div class="rule-icon">🔴</div><div class="rule-text"><strong>Live sync:</strong> Scores push to everyone the moment you hit Save. Leaderboard updates in real time.</div></div>
   </div>
   <div class="section-title" style="margin-top:8px;">Roster</div>
   <div class="section-sub">Handicaps & Teams</div>
@@ -247,16 +290,51 @@
 const HOLES = 18;
 
 const COURSES = [
-  { id:'robbers-row', name:"Robber's Row", club:'Port Royal GC', day:'April 9 · AM', tee:'Gold', rating:72.6, slope:134, yards:6507,
-    holes:[{par:4,hcp:5,yards:368},{par:3,hcp:15,yards:170},{par:5,hcp:13,yards:523},{par:4,hcp:3,yards:395},{par:4,hcp:7,yards:346},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:378},{par:4,hcp:9,yards:362},{par:5,hcp:1,yards:513},{par:4,hcp:10,yards:339},{par:5,hcp:2,yards:524},{par:4,hcp:6,yards:426},{par:4,hcp:8,yards:358},{par:3,hcp:16,yards:161},{par:5,hcp:12,yards:489},{par:3,hcp:18,yards:203},{par:4,hcp:14,yards:365},{par:4,hcp:4,yards:408}]},
-  { id:'barony', name:'Barony', club:'Port Royal GC', day:'April 9 · PM', tee:'Gold', rating:71.8, slope:135, yards:6507,
-    holes:[{par:4,hcp:5,yards:368},{par:3,hcp:15,yards:170},{par:5,hcp:13,yards:523},{par:4,hcp:3,yards:395},{par:4,hcp:7,yards:346},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:378},{par:4,hcp:9,yards:362},{par:5,hcp:1,yards:513},{par:4,hcp:10,yards:339},{par:5,hcp:2,yards:524},{par:4,hcp:6,yards:426},{par:4,hcp:8,yards:358},{par:3,hcp:16,yards:161},{par:5,hcp:12,yards:489},{par:3,hcp:18,yards:203},{par:4,hcp:14,yards:365},{par:4,hcp:4,yards:408}]},
-  { id:'oyster-reef', name:'Oyster Reef', club:'Oyster Reef GC', day:'April 10', tee:'Gold', rating:74.1, slope:133, yards:7006,
-    holes:[{par:4,hcp:13,yards:375},{par:5,hcp:5,yards:518},{par:3,hcp:17,yards:179},{par:4,hcp:11,yards:384},{par:4,hcp:7,yards:453},{par:3,hcp:15,yards:197},{par:4,hcp:9,yards:398},{par:4,hcp:1,yards:425},{par:5,hcp:3,yards:548},{par:4,hcp:14,yards:398},{par:3,hcp:18,yards:158},{par:5,hcp:10,yards:521},{par:4,hcp:8,yards:422},{par:4,hcp:12,yards:379},{par:5,hcp:2,yards:536},{par:3,hcp:16,yards:204},{par:4,hcp:4,yards:458},{par:4,hcp:6,yards:453}]},
-  { id:'cupp', name:'Cupp Course', club:'Palmetto Hall', day:'April 11 · AM', tee:'Gold', rating:73.8, slope:139, yards:6918,
-    holes:[{par:4,hcp:1,yards:438},{par:4,hcp:15,yards:395},{par:3,hcp:13,yards:192},{par:4,hcp:3,yards:437},{par:5,hcp:5,yards:490},{par:3,hcp:17,yards:191},{par:4,hcp:9,yards:397},{par:4,hcp:11,yards:382},{par:5,hcp:7,yards:546},{par:4,hcp:6,yards:398},{par:5,hcp:12,yards:526},{par:4,hcp:8,yards:378},{par:3,hcp:18,yards:158},{par:4,hcp:4,yards:442},{par:5,hcp:14,yards:521},{par:4,hcp:10,yards:403},{par:3,hcp:16,yards:190},{par:4,hcp:2,yards:434}]},
-  { id:'hills', name:'Hills Course', club:'Palmetto Hall', day:'April 11 · PM', tee:'Gold', rating:73.8, slope:139, yards:6918,
-    holes:[{par:4,hcp:1,yards:438},{par:4,hcp:15,yards:395},{par:3,hcp:13,yards:192},{par:4,hcp:3,yards:437},{par:5,hcp:5,yards:490},{par:3,hcp:17,yards:191},{par:4,hcp:9,yards:397},{par:4,hcp:11,yards:382},{par:5,hcp:7,yards:546},{par:4,hcp:6,yards:398},{par:5,hcp:12,yards:526},{par:4,hcp:8,yards:378},{par:3,hcp:18,yards:158},{par:4,hcp:4,yards:442},{par:5,hcp:14,yards:521},{par:4,hcp:10,yards:403},{par:3,hcp:16,yards:190},{par:4,hcp:2,yards:434}]}
+  { id:'robbers-row', name:"Robber's Row", club:'Port Royal GC', day:'April 9 · AM', rating:72.6, slope:134, yards:6507,
+    holes:[
+      {par:4,hcp:17,yards:368},{par:5,hcp:15,yards:170},{par:4,hcp:5,yards:523},
+      {par:3,hcp:7,yards:395},{par:4,hcp:9,yards:346},{par:5,hcp:3,yards:179},
+      {par:4,hcp:11,yards:378},{par:3,hcp:13,yards:362},{par:4,hcp:1,yards:513},
+      {par:4,hcp:12,yards:339},{par:4,hcp:6,yards:524},{par:3,hcp:16,yards:426},
+      {par:4,hcp:4,yards:358},{par:5,hcp:10,yards:161},{par:3,hcp:18,yards:489},
+      {par:4,hcp:14,yards:203},{par:4,hcp:8,yards:365},{par:5,hcp:2,yards:408}
+    ]},
+  { id:'barony', name:'Barony', club:'Port Royal GC', day:'April 9 · PM', rating:71.8, slope:135, yards:6507,
+    holes:[
+      {par:4,hcp:7,yards:368},{par:3,hcp:9,yards:170},{par:5,hcp:15,yards:523},
+      {par:4,hcp:5,yards:395},{par:4,hcp:11,yards:346},{par:3,hcp:17,yards:179},
+      {par:4,hcp:3,yards:378},{par:4,hcp:13,yards:362},{par:5,hcp:1,yards:513},
+      {par:4,hcp:10,yards:339},{par:5,hcp:8,yards:524},{par:4,hcp:4,yards:426},
+      {par:4,hcp:6,yards:358},{par:3,hcp:14,yards:161},{par:5,hcp:16,yards:489},
+      {par:3,hcp:18,yards:203},{par:4,hcp:12,yards:365},{par:4,hcp:2,yards:408}
+    ]},
+  { id:'oyster-reef', name:'Oyster Reef', club:'Oyster Reef GC', day:'April 10', rating:74.1, slope:133, yards:7006,
+    holes:[
+      {par:4,hcp:13,yards:375},{par:5,hcp:5,yards:518},{par:3,hcp:17,yards:179},
+      {par:4,hcp:11,yards:384},{par:4,hcp:7,yards:453},{par:3,hcp:15,yards:197},
+      {par:4,hcp:9,yards:398},{par:4,hcp:1,yards:425},{par:5,hcp:3,yards:548},
+      {par:4,hcp:14,yards:398},{par:3,hcp:18,yards:158},{par:5,hcp:10,yards:521},
+      {par:4,hcp:8,yards:422},{par:4,hcp:12,yards:379},{par:5,hcp:2,yards:536},
+      {par:3,hcp:16,yards:204},{par:4,hcp:4,yards:458},{par:4,hcp:6,yards:453}
+    ]},
+  { id:'cupp', name:'Cupp Course (Robert Cupp)', club:'Palmetto Hall', day:'April 11 · AM', rating:73.8, slope:139, yards:6918,
+    holes:[
+      {par:4,hcp:15,yards:438},{par:5,hcp:11,yards:395},{par:4,hcp:1,yards:192},
+      {par:3,hcp:13,yards:437},{par:4,hcp:9,yards:490},{par:5,hcp:7,yards:191},
+      {par:4,hcp:3,yards:397},{par:3,hcp:17,yards:382},{par:4,hcp:5,yards:546},
+      {par:5,hcp:8,yards:398},{par:4,hcp:16,yards:526},{par:3,hcp:12,yards:378},
+      {par:4,hcp:2,yards:158},{par:4,hcp:14,yards:442},{par:5,hcp:18,yards:521},
+      {par:3,hcp:10,yards:403},{par:4,hcp:6,yards:190},{par:4,hcp:4,yards:434}
+    ]},
+  { id:'hills', name:'Hills Course (Arthur Hills)', club:'Palmetto Hall', day:'April 11 · PM', rating:73.8, slope:139, yards:6918,
+    holes:[
+      {par:4,hcp:1,yards:384},{par:4,hcp:15,yards:352},{par:3,hcp:13,yards:170},
+      {par:4,hcp:3,yards:372},{par:5,hcp:5,yards:432},{par:3,hcp:17,yards:155},
+      {par:4,hcp:9,yards:350},{par:4,hcp:11,yards:335},{par:5,hcp:7,yards:480},
+      {par:4,hcp:6,yards:348},{par:5,hcp:12,yards:469},{par:4,hcp:8,yards:317},
+      {par:3,hcp:18,yards:138},{par:4,hcp:4,yards:388},{par:5,hcp:14,yards:457},
+      {par:4,hcp:10,yards:347},{par:3,hcp:16,yards:147},{par:4,hcp:2,yards:376}
+    ]}
 ];
 
 const ROUND_COURSE = ['robbers-row','barony','oyster-reef','cupp','hills','barony'];
@@ -289,171 +367,277 @@ const rounds = [
   {label:'Round 6', type:'match', matchups:[['Anthony','Billy','Willmore'],['Vince','Peyton M','Eric'],['Frank','Dylan','Peyton H']]},
 ];
 
-// ── SHARED STATE ─────────────────────────────────────────────────────────────
-// All game data lives in shared storage key 'lc2026-game'
-// Polled every 8 seconds. On save, pushed immediately.
-
-const STORAGE_KEY = 'lc2026-game';
-const POLL_INTERVAL = 8000;
-
+// ── STATE ─────────────────────────────────────────────────────────────────────
 function defaultState() {
-  const hs = {};
-  players.forEach(p => { hs[p.name] = rounds.map(() => Array(HOLES).fill('')); });
+  const hs = {}, ns = {};
+  players.forEach(p => {
+    hs[p.name] = rounds.map(() => Array(HOLES).fill(''));
+    ns[p.name] = rounds.map(() => Array(HOLES).fill(''));
+  });
   return {
     holeScores: hs,
+    holeNets: ns,
     scrambleHoles: rounds.map(r => r.matchups.map(() => Array(HOLES).fill(''))),
     hammers: {1:null, 2:null, 3:null},
     chulligans: rounds.map(() => { const o={}; players.forEach(p=>o[p.name]=false); return o; }),
     savedRounds: [],
+    finalRounds: [],  // Points only awarded when round is finalized
     lastUpdated: null,
     updatedBy: null
   };
 }
 
-// Local working copy (not yet saved to shared)
-let S = defaultState();
-let syncedAt = null;
-let pollTimer = null;
-let isSyncing = false;
 
-function guardState(s) {
-  if (!s.holeScores) { s.holeScores={}; players.forEach(p=>{s.holeScores[p.name]=rounds.map(()=>Array(HOLES).fill(''));}); }
-  if (!s.scrambleHoles) s.scrambleHoles=rounds.map(r=>r.matchups.map(()=>Array(HOLES).fill('')));
-  if (!s.savedRounds) s.savedRounds=[];
-  if (!s.hammers) s.hammers={1:null,2:null,3:null};
-  if (!s.chulligans) s.chulligans=rounds.map(()=>{const o={};players.forEach(p=>o[p.name]=false);return o;});
-  // Ensure all player hole arrays exist
+let S = defaultState();
+let currentUser = null;
+let dbRef = null;
+let firebaseReady = false;
+
+// ── FIREBASE HELPERS ──────────────────────────────────────────────────────────
+function initFirebaseListener() {
+  // Called on reconnect only
+  if (!dbRef) return;
+  dbRef.on('value',
+    snapshot => {
+      const data = snapshot.val();
+      setSyncStatus('live', '🔴 Live');
+      if (!data) return;
+      try {
+        const incoming = deepGuard(data);
+        if (!S.lastUpdated || !incoming.lastUpdated || incoming.lastUpdated >= S.lastUpdated) {
+          S = incoming;
+          updateSyncWho();
+          const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+          if(activePage==='leaderboard') renderLeaderboard();
+          else if(activePage==='scoring') softRefreshScoring();
+          else if(activePage==='chulligans') renderChulligans();
+          else if(activePage==='schedule') renderSchedule();
+        }
+      } catch(e) { console.warn('Sync parse error', e); }
+    },
+    err => {
+      setSyncStatus('offline', 'Connection lost — retrying');
+      setTimeout(initFirebaseListener, 4000);
+    }
+  );
+}
+
+// Deep-convert Firebase objects back to proper JS arrays/values
+function deepGuard(data) {
+  function fixArr(val, len, def) {
+    if (!val) return Array(len).fill(def);
+    if (Array.isArray(val)) {
+      const a = [...val];
+      while (a.length < len) a.push(def);
+      return a;
+    }
+    if (typeof val === 'object') {
+      const a = Array(len).fill(def);
+      Object.keys(val).forEach(k => { if (!isNaN(+k)) a[+k] = val[k] ?? def; });
+      return a;
+    }
+    return Array(len).fill(def);
+  }
+
+  const s = JSON.parse(JSON.stringify(data)); // deep clone
+
+  // Fix holeScores — Firebase turns arrays into {0:val, 1:val} objects
+  if (!s.holeScores) s.holeScores = {};
   players.forEach(p => {
-    if (!s.holeScores[p.name]) s.holeScores[p.name]=rounds.map(()=>Array(HOLES).fill(''));
-    s.holeScores[p.name].forEach((arr,ri)=>{ if(!Array.isArray(arr)||arr.length<HOLES){ s.holeScores[p.name][ri]=Array(HOLES).fill(''); } });
+    const raw = s.holeScores[p.name];
+    const roundArr = fixArr(raw, rounds.length, null);
+    s.holeScores[p.name] = roundArr.map(r => {
+      const holes = fixArr(r, HOLES, '');
+      // Ensure every element is a string (Firebase may coerce nulls)
+      return holes.map(v => (v === null || v === undefined) ? '' : String(v === 0 ? '' : v));
+    });
   });
+
+  // Fix holeNets
+  if (!s.holeNets) s.holeNets = {};
+  players.forEach(p => {
+    const raw = s.holeNets?.[p.name];
+    const roundArr = fixArr(raw, rounds.length, null);
+    s.holeNets[p.name] = roundArr.map(r => {
+      const holes = fixArr(r, HOLES, '');
+      return holes.map(v => (v === null || v === undefined) ? '' : String(v === 0 ? '' : v));
+    });
+  });
+
+  // Fix scrambleHoles
+  const sh = fixArr(s.scrambleHoles, rounds.length, null);
+  s.scrambleHoles = sh.map((round, ri) => {
+    const r = fixArr(round, rounds[ri].matchups.length, null);
+    return r.map(m => fixArr(m, HOLES, ''));
+  });
+
+  // Fix savedRounds
+  const sr = s.savedRounds;
+  if (!sr) s.savedRounds = [];
+  else if (!Array.isArray(sr)) s.savedRounds = Object.values(sr).filter(v => v !== null && v !== undefined);
+
+  // Fix finalRounds
+  const fr = s.finalRounds;
+  if (!fr) s.finalRounds = [];
+  else if (!Array.isArray(fr)) s.finalRounds = Object.values(fr).filter(v => v !== null && v !== undefined);
+
+  // Fix hammers
+  if (!s.hammers) s.hammers = {1:null,2:null,3:null};
+
+  // Fix chulligans
+  const ch = fixArr(s.chulligans, rounds.length, null);
+  s.chulligans = ch.map(r => {
+    if (!r || typeof r !== 'object') { const o={}; players.forEach(p=>o[p.name]=false); return o; }
+    return r;
+  });
+
   return s;
 }
 
-// ── SYNC ENGINE ───────────────────────────────────────────────────────────────
-function setSyncStatus(status) {
+async function pushToFirebase() {
+  if (!firebaseReady || !dbRef) {
+    try { localStorage.setItem('lc2026', JSON.stringify(S)); } catch(e){}
+    setSyncStatus('offline', 'Saved locally only');
+    return;
+  }
+  setSyncStatus('syncing', 'Saving...');
+  S.lastUpdated = Date.now();
+  S.updatedBy = currentUser;
+  try {
+    await dbRef.set(JSON.parse(JSON.stringify(S)));
+    setSyncStatus('live', '🔴 Live');
+    console.log('✅ Pushed to Firebase at', new Date().toLocaleTimeString());
+  } catch(e) {
+    console.warn('Push failed:', e);
+    setSyncStatus('offline', 'Save failed — tap again');
+  }
+}
+
+// ── SYNC UI ───────────────────────────────────────────────────────────────────
+function setSyncStatus(status, label) {
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-status');
-  if (status==='live')    { dot.className='sync-dot live';    lbl.textContent='Live'; }
-  if (status==='syncing') { dot.className='sync-dot syncing'; lbl.textContent='Syncing...'; }
-  if (status==='offline') { dot.className='sync-dot';         lbl.textContent='Offline'; }
+  dot.className = 'sync-dot ' + status;
+  lbl.textContent = label || status;
 }
 
-async function pushState(playerName) {
-  if (!window.storage) return;
-  setSyncStatus('syncing');
-  isSyncing = true;
-  const payload = JSON.parse(JSON.stringify(S));
-  payload.lastUpdated = Date.now();
-  payload.updatedBy = playerName || 'Unknown';
-  try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(payload), true);
-    S = payload;
-    syncedAt = Date.now();
-    setSyncStatus('live');
-    updateLastUpdatedLabel();
-  } catch(e) {
-    setSyncStatus('offline');
-  }
-  isSyncing = false;
-}
-
-async function pullState() {
-  if (!window.storage || isSyncing) return;
-  try {
-    const result = await window.storage.get(STORAGE_KEY, true);
-    if (!result) return;
-    const remote = guardState(JSON.parse(result.value));
-    // Only update if remote is newer
-    if (!syncedAt || (remote.lastUpdated && remote.lastUpdated > (S.lastUpdated||0))) {
-      S = remote;
-      syncedAt = Date.now();
-      setSyncStatus('live');
-      updateLastUpdatedLabel();
-      refreshCurrentPage();
-    } else {
-      setSyncStatus('live');
-    }
-  } catch(e) {
-    setSyncStatus('offline');
-  }
-}
-
-function updateLastUpdatedLabel() {
-  const el = document.getElementById('last-updated');
-  if (!S.lastUpdated) { el.textContent='—'; return; }
+function updateSyncWho() {
+  const el = document.getElementById('sync-who');
+  if (!S.lastUpdated) { el.textContent = '—'; return; }
   const d = new Date(S.lastUpdated);
-  const hh = d.getHours().toString().padStart(2,'0');
-  const mm = d.getMinutes().toString().padStart(2,'0');
-  const ss = d.getSeconds().toString().padStart(2,'0');
-  el.textContent = `${S.updatedBy||'?'} · ${hh}:${mm}:${ss}`;
+  const t = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.textContent = `${S.updatedBy || '?'} · ${t}`;
 }
 
 function refreshCurrentPage() {
-  const active = document.querySelector('.page.active')?.id?.replace('page-','');
-  if (active==='leaderboard') renderLeaderboard();
-  if (active==='scoring') renderScoring();
-  if (active==='chulligans') renderChulligans();
-  if (active==='schedule') renderSchedule();
+  const id = document.querySelector('.page.active')?.id?.replace('page-','');
+  if (id==='leaderboard') renderLeaderboard();
+  if (id==='scoring')     renderScoring();
+  if (id==='chulligans')  renderChulligans();
+  if (id==='schedule')    renderSchedule();
 }
 
-async function initSync() {
-  if (!window.storage) {
-    // Fallback: load from localStorage
-    try { const s=localStorage.getItem('lc2026v4'); if(s) S=guardState(JSON.parse(s)); } catch{}
-    document.getElementById('loading-overlay').classList.add('hidden');
-    setSyncStatus('offline');
-    renderAll();
-    return;
-  }
-  setSyncStatus('syncing');
-  try {
-    const result = await window.storage.get(STORAGE_KEY, true);
-    if (result) {
-      S = guardState(JSON.parse(result.value));
-      syncedAt = Date.now();
+// ── SETUP: WHO ARE YOU? ───────────────────────────────────────────────────────
+function buildSetup() {
+  const grid = document.getElementById('name-grid');
+  grid.innerHTML = players.map(p =>
+    `<button class="name-btn" onclick="selectName('${p.name}',this)">${p.name}</button>`
+  ).join('');
+}
+
+function selectName(name, btn) {
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentUser = name;
+  document.getElementById('setup-continue').disabled = false;
+}
+
+async function finishSetup() {
+  if (!currentUser) return;
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('header-sub').textContent = `Playing as ${currentUser} · Live Scoring`;
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-text').textContent = 'Connecting to Firebase...';
+
+  const isConfigured = FIREBASE_CONFIG.apiKey !== 'PASTE_YOUR_apiKey_HERE';
+
+  if (isConfigured) {
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      const db = firebase.database();
+      dbRef = db.ref('lc2026/gameState');
+      firebaseReady = true;
+
+      // Wait for the FIRST snapshot before showing the app
+      // This ensures we have actual data before rendering
+      document.getElementById('loading-text').textContent = 'Loading live scores...';
+      const snapshot = await dbRef.once('value');
+      const data = snapshot.val();
+      if (data) {
+        try { S = deepGuard(data); } catch(e) { console.warn('Initial load parse error', e); }
+      }
+
+      // Now set up the ongoing live listener for future updates
+      dbRef.on('value',
+        snapshot => {
+          const data = snapshot.val();
+          setSyncStatus('live', '🔴 Live');
+          if (!data) return;
+          try {
+            const incoming = deepGuard(data);
+            if (!S.lastUpdated || !incoming.lastUpdated || incoming.lastUpdated >= S.lastUpdated) {
+              S = incoming;
+              updateSyncWho();
+              const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+              if(activePage==='leaderboard') renderLeaderboard();
+              else if(activePage==='scoring') softRefreshScoring();
+              else if(activePage==='chulligans') renderChulligans();
+              else if(activePage==='schedule') renderSchedule();
+            }
+          } catch(e) { console.warn('Sync parse error', e); }
+        },
+        err => {
+          console.warn('Firebase error', err);
+          setSyncStatus('offline', 'Connection lost — retrying');
+          setTimeout(initFirebaseListener, 4000);
+        }
+      );
+      setSyncStatus('live', '🔴 Live');
+      updateSyncWho();
+    } catch(e) {
+      console.warn('Firebase init failed', e);
+      setSyncStatus('offline', 'Firebase error');
     }
-    setSyncStatus('live');
-  } catch(e) {
-    setSyncStatus('offline');
+  } else {
+    setSyncStatus('offline', 'Offline mode');
   }
+
   document.getElementById('loading-overlay').classList.add('hidden');
   renderAll();
-  // Start polling
-  pollTimer = setInterval(pullState, POLL_INTERVAL);
-}
-
-function renderAll() {
-  renderLeaderboard();
-  renderScoring();
-  renderChulligans();
-  renderRoster();
-  renderCourses();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const getP = n => players.find(p=>p.name===n);
 const pTeam = n => getP(n)?.team;
-
-function grossOf(name, ri) { return S.holeScores[name][ri].reduce((s,v)=>s+(v===''?0:+v),0); }
-function filledOf(name, ri) { return S.holeScores[name][ri].filter(v=>v!=='').length; }
-function grossScramble(ri, mi) { return S.scrambleHoles[ri][mi].reduce((s,v)=>s+(v===''?0:+v),0); }
-function filledScramble(ri, mi) { return S.scrambleHoles[ri][mi].filter(v=>v!=='').length; }
+const safeArr = (arr) => Array.isArray(arr) ? arr : Array(HOLES).fill('');
+const grossOf = (name,ri) => safeArr(S.holeScores[name]?.[ri]).reduce((s,v)=>s+(v===''||v===null||v===undefined?0:+v),0);
+const netOf   = (name,ri) => safeArr(S.holeNets[name]?.[ri]).reduce((s,v)=>s+(v===''||v===null||v===undefined?0:+v),0);
+const filledOf = (name,ri) => safeArr(S.holeScores[name]?.[ri]).filter(v=>v!==''&&v!==null&&v!==undefined).length;
+const grossScramble = (ri,mi) => safeArr(S.scrambleHoles?.[ri]?.[mi]).reduce((s,v)=>s+(v===''||v===null||v===undefined?0:+v),0);
+const filledScramble = (ri,mi) => safeArr(S.scrambleHoles?.[ri]?.[mi]).filter(v=>v!==''&&v!==null&&v!==undefined).length;
 
 function computePlaces(matchup, ri) {
   const data = matchup.map(n => filledOf(n,ri)<HOLES ? null : {name:n, net:grossOf(n,ri)-getP(n).hcp});
   if (data.some(d=>d===null)) return null;
   return [...data].sort((a,b)=>a.net-b.net).map(d=>d.name);
 }
-
 function computeScramblePlaces(ri) {
-  const data = rounds[ri].matchups.map((_,mi) => filledScramble(ri,mi)<HOLES ? null : {mi, gross:grossScramble(ri,mi)});
+  const data = rounds[ri].matchups.map((_,mi)=>filledScramble(ri,mi)<HOLES?null:{mi,gross:grossScramble(ri,mi)});
   if (data.some(d=>d===null)) return null;
   return [...data].sort((a,b)=>a.gross-b.gross).map(d=>d.mi);
 }
-
 function scoreClass(g, par) {
-  if (g==='') return '';
+  if(g==='') return '';
   const d=+g-par;
   return d<=-2?'c-eagle':d===-1?'c-birdie':d===1?'c-bogey':d>=2?'c-double':'';
 }
@@ -461,27 +645,22 @@ function scoreClass(g, par) {
 // ── POINTS ────────────────────────────────────────────────────────────────────
 function allPoints() {
   const pts={}; players.forEach(p=>pts[p.name]=0);
-  rounds.forEach((round,ri) => {
-    if (!S.savedRounds.includes(ri)) return;
+  rounds.forEach((round,ri)=>{
+    if(!S.finalRounds?.includes(ri)) return; // Points only awarded when round is finalized
     const bm=[2,1,0];
-    if (round.type==='scramble') {
+    if(round.type==='scramble'){
       const placed=computeScramblePlaces(ri); if(!placed) return;
       placed.forEach((mi,rank)=>round.matchups[mi].forEach(n=>{const m=S.hammers[pTeam(n)]===ri?2:1;pts[n]+=bm[rank]*m;}));
     } else {
-      round.matchups.forEach(matchup=>{
-        const placed=computePlaces(matchup,ri); if(!placed) return;
+      round.matchups.forEach(mu=>{
+        const placed=computePlaces(mu,ri); if(!placed) return;
         placed.forEach((n,rank)=>{const m=S.hammers[pTeam(n)]===ri?2:1;pts[n]+=bm[rank]*m;});
       });
     }
   });
   return pts;
 }
-
-function teamPoints(p) {
-  const t={};
-  teams.forEach(tm=>t[tm.id]=tm.members.reduce((s,m)=>s+(p[m]||0),0));
-  return t;
-}
+function teamPoints(p){const t={};teams.forEach(tm=>t[tm.id]=tm.members.reduce((s,m)=>s+(p[m]||0),0));return t;}
 
 // ── LEADERBOARD ───────────────────────────────────────────────────────────────
 function renderLeaderboard() {
@@ -490,10 +669,9 @@ function renderLeaderboard() {
   document.getElementById('individual-lb').innerHTML=sorted.map((p,i)=>`
     <div class="lb-row">
       <div class="lb-rank ${['r1','r2','r3'][i]||''}">${i+1}</div>
-      <div class="lb-info"><div class="lb-name">${p.name}</div><div class="lb-team">Team ${p.team} · HCP ${p.hcp}</div></div>
+      <div class="lb-info"><div class="lb-name">${p.name}${p.name===currentUser?' <span style="font-size:10px;color:var(--sand);font-family:\'DM Mono\',monospace">YOU</span>':''}</div><div class="lb-team">Team ${p.team} · HCP ${p.hcp}</div></div>
       <div><div class="lb-pts">${pts[p.name]||0}</div><div class="lb-pts-label">pts</div></div>
     </div>`).join('');
-
   const tp=teamPoints(pts);
   const st=[...teams].sort((a,b)=>tp[b.id]-tp[a.id]);
   document.getElementById('team-lb').innerHTML=st.map((t,i)=>{
@@ -507,157 +685,470 @@ function renderLeaderboard() {
 }
 
 // ── SCORING ───────────────────────────────────────────────────────────────────
-let activeGroup=0;
+let activeGroup = 0;
+let editMode = false; // true = inputs unlocked for currentUser
 
-function onRoundChange(){activeGroup=0;renderScoring();}
+function onRoundChange(){ activeGroup=0; editMode=false; renderScoring(); }
 
 function renderScoring(){
-  const ri=+document.getElementById('round-selector').value;
-  document.getElementById('round-label').textContent=rounds[ri].label;
-  rounds[ri].type==='scramble'?renderScramble(ri):renderMatch(ri);
+  const ri = +document.getElementById('round-selector').value;
+  document.getElementById('round-label').textContent = rounds[ri].label;
+  const course = COURSES.find(x=>x.id===ROUND_COURSE[ri]);
+  document.getElementById('round-course').textContent = course ? `${course.name} · ${course.club}` : '';
+  rounds[ri].type==='scramble' ? renderScramble(ri) : renderMatch(ri);
 }
 
-function scorecardTable(rows, isSaved, parArr) {
-  const hNums=Array.from({length:HOLES},(_,i)=>i+1);
+// Soft refresh — called by Firebase listener, never touches inputs
+function softRefreshScoring(){
+  const ri = +document.getElementById('round-selector').value;
+  const round = rounds[ri];
+  const mi = activeGroup;
+
+  if(round.type==='scramble'){
+    round.matchups.forEach((_,mIdx) => {
+      if(mIdx === mi) return;
+      const sc = safeArr(S.scrambleHoles[ri][mIdx]);
+      const out = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+      const inn = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+      const oe=document.getElementById(`sc-out-${ri}-${mIdx}`);
+      const ie=document.getElementById(`sc-in-${ri}-${mIdx}`);
+      const te=document.getElementById(`sc-tot-${ri}-${mIdx}`);
+      if(oe) oe.textContent=out||'—';
+      if(ie) ie.textContent=inn||'—';
+      if(te) te.textContent=(out+inn)||'—';
+    });
+    return;
+  }
+
+  round.matchups[mi].forEach(name => {
+    const isMe = name===currentUser;
+    const sid = name.replace(/\s/g,'_');
+
+    // Update gross totals
+    const scores = safeArr(S.holeScores[name]?.[ri]);
+    const out = scores.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const inn = scores.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const oe=document.getElementById(`out-${sid}-${ri}`);
+    const ie=document.getElementById(`in-${sid}-${ri}`);
+    const te=document.getElementById(`tot-${sid}-${ri}`);
+    if(oe) oe.textContent=out||'—';
+    if(ie) ie.textContent=inn||'—';
+    if(te) te.textContent=(out+inn)||'—';
+
+    // Update net totals
+    const nets = safeArr(S.holeNets?.[name]?.[ri]);
+    const nout = nets.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const ninn = nets.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const noe=document.getElementById(`net-out-${sid}-${ri}`);
+    const nie=document.getElementById(`net-in-${sid}-${ri}`);
+    const nte=document.getElementById(`net-tot-${sid}-${ri}`);
+    if(noe) noe.textContent=nout||'—';
+    if(nie) nie.textContent=ninn||'—';
+    if(nte) nte.textContent=(nout+ninn)||'—';
+
+    // Update other players' cell values/colors (don't touch yours while editing)
+    if(!isMe || !editMode){
+      const parArr = getParForRound(ri);
+      scores.forEach((v,hi)=>{
+        const cell=document.getElementById(`cell-${sid}-${ri}-${hi}`);
+        if(!cell) return;
+        const inp=cell.querySelector('input');
+        if(inp && inp.value!==String(v)) inp.value=v;
+        cell.className=scoreClass(v,parArr[hi]);
+      });
+    }
+  });
+  updateResultsBlock(ri, mi, round.matchups[mi]);
+}
+
+function updateResultsBlock(ri, mi, matchup){
+  const el=document.getElementById(`results-block-${ri}-${mi}`);
+  if(!el) return;
+  const placed = S.savedRounds.includes(ri) ? computePlaces(matchup,ri) : null;
+  if(!placed){ el.style.display='none'; return; }
+  el.style.display='block';
+  const isFinal = S.finalRounds?.includes(ri);
+  const bm=[2,1,0];
+  el.innerHTML=
+    `<div class="matchup-block-header" style="background:${isFinal?'#1a4a15':''};">
+      <div class="matchup-block-title">Group ${mi+1} Results ${isFinal?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
+    </div>`+
+    placed.map((name,rank)=>{
+      const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
+      const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
+      return `<div class="result-row">
+        <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
+        <div style="flex:1;font-weight:500">${name}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;color:${isFinal?'var(--gold)':'var(--muted)'};font-weight:700">${isFinal?ep+'pt':'—'}</div>
+      </div>`;
+    }).join('');
+}
+
+// Build the 18-hole input table with Score + Net Score per player
+function scorecardTable(rows, parArr, ri, matchup){
+  const hN=Array.from({length:HOLES},(_,i)=>i+1);
   const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
   const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
-  const tp=op+ip;
+  const iAmInGroup = matchup.includes(currentUser);
 
-  let html=`<div class="sc-wrap"><table class="sc"><thead><tr>
-    <th class="lft">Player</th>
-    ${hNums.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
-    ${hNums.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
-    <th class="divider">IN</th><th>TOT</th><th>NET</th>
-  </tr></thead><tbody>
-  <tr class="par-row">
-    <td class="lft">Par</td>
-    ${parArr.slice(0,9).map(p=>`<td>${p}</td>`).join('')}<td>${op}</td>
-    ${parArr.slice(9).map((p,i)=>`<td class="${i===0?'divider':''}">${p}</td>`).join('')}
-    <td class="divider">${ip}</td><td>${tp}</td><td>—</td>
-  </tr>`;
+  let html=`<div class="sc-wrap"><table class="sc"><thead>
+    <tr>
+      <th class="lft" rowspan="2">Player</th>
+      ${hN.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
+      ${hN.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
+      <th class="divider">IN</th><th>TOT</th>
+    </tr>
+    <tr style="background:#1a3a16;">
+      ${hN.slice(0,9).map(h=>`<th style="font-size:8px;color:var(--sand-light);letter-spacing:.5px;">HCP ${COURSES.find(x=>x.id===ROUND_COURSE[ri])?.holes[h-1]?.hcp??''}</th>`).join('')}
+      <th style="font-size:8px;color:var(--sand-light);">—</th>
+      ${hN.slice(9).map(h=>`<th class="${h===10?'divider':''}" style="font-size:8px;color:var(--sand-light);letter-spacing:.5px;">HCP ${COURSES.find(x=>x.id===ROUND_COURSE[ri])?.holes[h-1]?.hcp??''}</th>`).join('')}
+      <th class="divider" style="font-size:8px;color:var(--sand-light);">—</th>
+      <th style="font-size:8px;color:var(--sand-light);">—</th>
+    </tr>
+    <tr class="par-row">
+      <td class="lft">Par</td>
+      ${parArr.slice(0,9).map(p=>`<td>${p}</td>`).join('')}<td>${op}</td>
+      ${parArr.slice(9).map((p,i)=>`<td class="${i===0?'divider':''}">${p}</td>`).join('')}
+      <td class="divider">${ip}</td><td>${op+ip}</td>
+    </tr>
+  </thead><tbody>`;
 
   rows.forEach(row=>{
-    const sc=row.scores;
-    const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
-    const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
-    const tot=out+inn;
-    const net=tot>0&&row.hcp!==undefined?(tot-row.hcp).toFixed(1):'—';
-    html+=`<tr>
-      <td class="lft">${row.label}${row.sublabel?`<br><span style="font-size:10px;color:var(--muted)">${row.sublabel}</span>`:''}</td>
-      ${sc.slice(0,9).map((v,hi)=>`<td class="${scoreClass(v,parArr[hi])}"><input class="hi${isSaved?' ro':''}" type="number" min="1" max="15" value="${v}" oninput="${row.fn}(${row.args},${hi},this.value)" ${isSaved?'readonly':''}></td>`).join('')}
-      <td class="tot">${out||'—'}</td>
-      ${sc.slice(9).map((v,i)=>{const hi=i+9;return `<td class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}"><input class="hi${isSaved?' ro':''}" type="number" min="1" max="15" value="${v}" oninput="${row.fn}(${row.args},${hi},this.value)" ${isSaved?'readonly':''}></td>`;}).join('')}
-      <td class="tot divider">${inn||'—'}</td>
-      <td class="tot">${tot||'—'}</td>
-      <td class="tot" style="color:var(--green)">${net}</td>
+    const canEdit = iAmInGroup && editMode;
+    const sc  = safeArr(row.scores);
+    const ns  = safeArr(row.nets);
+    const sid = row.name.replace(/\s/g,'_');
+
+    const grossOut = sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const grossIn  = sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const grossTot = grossOut+grossIn;
+    const netOut   = ns.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const netIn    = ns.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+    const netTot   = netOut+netIn;
+
+    // GROSS row
+    html+=`<tr style="border-top:2px solid #e8e4db;">
+      <td class="lft" rowspan="2" style="vertical-align:middle;">
+        ${row.label}<br>
+        <span style="font-size:10px;color:var(--muted)">${row.sub}</span>
+      </td>
+      ${sc.slice(0,9).map((v,hi)=>`
+        <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}">
+          <div style="font-size:8px;color:var(--muted);text-align:center;line-height:1;">SCR</div>
+          <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onHoleInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
+        </td>`).join('')}
+      <td class="tot" id="out-${sid}-${ri}">${grossOut||'—'}</td>
+      ${sc.slice(9).map((v,i)=>{const hi=i+9;return `
+        <td id="cell-${sid}-${ri}-${hi}" class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}">
+          <div style="font-size:8px;color:var(--muted);text-align:center;line-height:1;">SCR</div>
+          <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onHoleInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
+        </td>`;}).join('')}
+      <td class="tot divider" id="in-${sid}-${ri}">${grossIn||'—'}</td>
+      <td class="tot" id="tot-${sid}-${ri}">${grossTot||'—'}</td>
+    </tr>
+    <tr style="background:#f3f8f2;">
+      ${ns.slice(0,9).map((v,hi)=>`
+        <td style="background:#f3f8f2;">
+          <div style="font-size:8px;color:var(--green);text-align:center;line-height:1;">NET</div>
+          <input class="hi${canEdit?'':' ro'}" style="background:#e8f4e8;border-color:#b8ddb8;" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onNetInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
+        </td>`).join('')}
+      <td class="tot" style="background:#f3f8f2;color:var(--green);" id="net-out-${sid}-${ri}">${netOut||'—'}</td>
+      ${ns.slice(9).map((v,i)=>{const hi=i+9;return `
+        <td style="background:#f3f8f2;${i===0?'border-left:2px solid #ccc;':''}">
+          <div style="font-size:8px;color:var(--green);text-align:center;line-height:1;">NET</div>
+          <input class="hi${canEdit?'':' ro'}" style="background:#e8f4e8;border-color:#b8ddb8;" type="number" min="1" max="15" value="${v}"
+            ${canEdit?`oninput="onNetInput('${row.name}',${ri},${hi},this)"`:'readonly tabindex="-1"'}>
+        </td>`;}).join('')}
+      <td class="tot" style="background:#f3f8f2;color:var(--green);border-left:2px solid #ccc;" id="net-in-${sid}-${ri}">${netIn||'—'}</td>
+      <td class="tot" style="background:#f3f8f2;color:var(--green);font-weight:700;" id="net-tot-${sid}-${ri}">${netTot||'—'}</td>
     </tr>`;
   });
-  html+=`</tbody></table></div>`;
-  return html;
+
+  return html+'</tbody></table></div>';
 }
 
-function renderMatch(ri) {
-  const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
-  const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
+// Live update gross totals as user types
+function onHoleInput(name, ri, hi, input){
+  const val=input.value;
+  S.holeScores[name][ri][hi]=val;
+  const parArr=getParForRound(ri);
+  const cell=input.parentElement;
+  const divClass=(hi>=9&&hi===9)?' divider':'';
+  cell.className=scoreClass(val,parArr[hi])+divClass;
+  const sc=S.holeScores[name][ri];
+  const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const sid=name.replace(/\s/g,'_');
+  const oe=document.getElementById(`out-${sid}-${ri}`);
+  const ie=document.getElementById(`in-${sid}-${ri}`);
+  const te=document.getElementById(`tot-${sid}-${ri}`);
+  if(oe) oe.textContent=out||'—';
+  if(ie) ie.textContent=inn||'—';
+  if(te) te.textContent=(out+inn)||'—';
+}
+
+// Live update net totals as user types
+function onNetInput(name, ri, hi, input){
+  const val=input.value;
+  if (!S.holeNets[name]) S.holeNets[name]=rounds.map(()=>Array(HOLES).fill(''));
+  S.holeNets[name][ri][hi]=val;
+  const ns=S.holeNets[name][ri];
+  const out=ns.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=ns.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const sid=name.replace(/\s/g,'_');
+  const oe=document.getElementById(`net-out-${sid}-${ri}`);
+  const ie=document.getElementById(`net-in-${sid}-${ri}`);
+  const te=document.getElementById(`net-tot-${sid}-${ri}`);
+  if(oe) oe.textContent=out||'—';
+  if(ie) ie.textContent=inn||'—';
+  if(te) te.textContent=(out+inn)||'—';
+}
+
+function onScrambleInput(ri, mi, hi, input){
+  const val=input.value;
+  S.scrambleHoles[ri][mi][hi]=val;
+  const parArr=getParForRound(ri);
+  input.parentElement.className=scoreClass(val,parArr[hi])+(hi===9?' divider':'');
+  const sc=S.scrambleHoles[ri][mi];
+  const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  document.getElementById(`sc-out-${ri}-${mi}`).textContent=out||'—';
+  document.getElementById(`sc-in-${ri}-${mi}`).textContent=inn||'—';
+  document.getElementById(`sc-tot-${ri}-${mi}`).textContent=(out+inn)||'—';
+}
+
+function enterEditMode(){
+  editMode=true;
+  renderScoring();
+}
+
+async function saveScores(){
+  const ri=+document.getElementById('round-selector').value;
+  const btn=document.getElementById('save-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Saving...'; }
+  editMode=false;
+  if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
+  await pushToFirebase();
+  renderScoring();
+  renderLeaderboard();
+  showToast(`Round ${ri+1} saved & synced! 🔴`);
+}
+
+async function endRound(ri){
+  const round = rounds[ri];
+  const confirmed = confirm(`🏁 End Round ${ri+1} and lock in points?\n\nThis will finalize all scores and award points to the leaderboard. Scores can still be edited but points won't change.\n\nPress OK to confirm.`);
+  if (!confirmed) return;
+  if (!S.finalRounds) S.finalRounds = [];
+  if (!S.finalRounds.includes(ri)) S.finalRounds.push(ri);
+  if (!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
+  await pushToFirebase();
+  renderScoring();
+  renderLeaderboard();
+  showToast(`🏁 Round ${ri+1} finalized! Points awarded.`);
+}
+
+function renderMatch(ri){
+  try {
+  const round=rounds[ri];
+  const mi=activeGroup;
+  const matchup=round.matchups[mi];
+  const iAmInGroup = matchup.includes(currentUser);
+
+  const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
     const done=m.every(n=>filledOf(n,ri)===HOLES);
-    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Group ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.join(' · ')}</span></button>`;
+    return `<button class="group-nav-btn ${gmi===mi?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${gmi};editMode=false;renderScoring()">Group ${gmi+1}<br><span style="font-size:9px;opacity:.75">${m.join(' · ')}</span></button>`;
   }).join('')}</div>`;
 
-  const mi=activeGroup; const matchup=round.matchups[mi];
   const teamsHere=[...new Set(matchup.map(n=>pTeam(n)))];
   const hbtns=teamsHere.map(tid=>{
     if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) return `<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
     return `<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
   }).join('');
 
+  // Ensure holeScores and holeNets are proper arrays before rendering
+  matchup.forEach(name => {
+    if (!Array.isArray(S.holeScores[name]?.[ri])) {
+      if (!S.holeScores[name]) S.holeScores[name] = rounds.map(()=>Array(HOLES).fill(''));
+      S.holeScores[name][ri] = Array(HOLES).fill('');
+    }
+    if (!S.holeNets) S.holeNets = {};
+    if (!Array.isArray(S.holeNets[name]?.[ri])) {
+      if (!S.holeNets[name]) S.holeNets[name] = rounds.map(()=>Array(HOLES).fill(''));
+      S.holeNets[name][ri] = Array(HOLES).fill('');
+    }
+  });
+
   const rows=matchup.map(name=>({
+    name,
     label:`${name}${S.hammers[pTeam(name)]===ri?' <span class="badge-hammer">🔨</span>':''}`,
-    sublabel:`HCP ${getP(name).hcp}`,
-    scores:S.holeScores[name][ri],
+    sub:`HCP ${getP(name).hcp}`,
+    scores: safeArr(S.holeScores[name]?.[ri]),
+    nets:   safeArr(S.holeNets?.[name]?.[ri]),
     hcp:getP(name).hcp,
-    fn:'setHole', args:`'${name}',${ri}`
+    ri
   }));
 
-  const placed=isSaved?computePlaces(matchup,ri):null;
-  let res='';
-  if(placed){
-    const bm=[2,1,0];
-    res=`<div class="matchup-block" style="margin-top:12px;">
-      <div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} Results</div></div>
-      ${placed.map((name,rank)=>{
-        const mult=S.hammers[pTeam(name)]===ri?2:1; const ep=bm[rank]*mult;
-        const g=grossOf(name,ri); const net=(g-getP(name).hcp).toFixed(1);
+  const isFinal = S.finalRounds?.includes(ri);
+  const placed = S.savedRounds.includes(ri) ? computePlaces(matchup,ri) : null;
+
+  const resHtml = placed ? `
+    <div class="matchup-block" id="results-block-${ri}-${mi}" style="margin-top:12px;">
+      <div class="matchup-block-header" style="background:${isFinal?'#1a4a15':'';}">
+        <div class="matchup-block-title">Group ${mi+1} Results ${isFinal?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
+      </div>
+      ${(()=>{const bm=[2,1,0];return placed.map((name,rank)=>{
+        const mult=S.hammers[pTeam(name)]===ri?2:1;const ep=bm[rank]*mult;
+        const g=grossOf(name,ri);const net=(g-getP(name).hcp).toFixed(1);
         return `<div class="result-row">
           <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
           <div style="flex:1;font-weight:500">${name}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${g} gross</div>
-          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)">${net} net</div>
-          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt</div>
-        </div>`;
-      }).join('')}</div>`;
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">${net} net</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:${isFinal?'var(--gold)':'var(--muted)'};font-weight:700">${isFinal?ep+'pt':'—'}</div>
+        </div>`;}).join('');})()}
+    </div>` : `<div id="results-block-${ri}-${mi}" style="display:none"></div>`;
+
+  // Action buttons — only for group members
+  // Once finalized: no more editing, no more saving
+  let actionBtns = '';
+  if (iAmInGroup) {
+    if (isFinal) {
+      actionBtns = `<div style="text-align:center;padding:12px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>`;
+    } else {
+      actionBtns = `<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+        ${!editMode ? `<button id="edit-btn" class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Group Scores</button>` : ''}
+        ${editMode ? `<button id="save-btn" class="save-btn" style="flex:1;" onclick="saveScores()">💾 Save & Sync</button>` : ''}
+        ${placed && !editMode ? `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>` : ''}
+      </div>`;
+    }
+  } else {
+    actionBtns = `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your group</div>`;
   }
 
-  document.getElementById('scoring-content').innerHTML=gnav+
-    `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Group ${mi+1} · Hole-by-Hole</div><div style="display:flex;gap:6px;align-items:center">${hbtns}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
-    res+(isSaved?`<div class="saved-notice">✓ Synced — edit any cell then re-save</div>`:'');
+  document.getElementById('scoring-content').innerHTML=
+    gnav+
+    `<div class="matchup-block">
+      <div class="matchup-block-header">
+        <div class="matchup-block-title">Group ${mi+1} · ${round.label}${iAmInGroup&&editMode?' <span style="color:var(--sand)">· ✏️ Editing</span>':''}</div>
+        <div style="display:flex;gap:6px;align-items:center">${hbtns}</div>
+      </div>
+      ${scorecardTable(rows,getParForRound(ri),ri,matchup)}
+    </div>`+
+    resHtml+
+    actionBtns;
+
+  } catch(e) {
+    console.error('renderMatch error:', e);
+    document.getElementById('scoring-content').innerHTML=`<div class="card" style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px;padding:20px;">Error loading scorecard. Try refreshing.</div>`;
+  }
 }
 
-function renderScramble(ri) {
-  const round=rounds[ri]; const isSaved=S.savedRounds.includes(ri);
-  const gnav=`<div class="group-nav">${round.matchups.map((m,mi)=>{
-    const done=filledScramble(ri,mi)===HOLES;
-    return `<button class="group-nav-btn ${mi===activeGroup?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${mi};renderScoring()">Team ${mi+1}<br><span style="font-size:9px;opacity:.75">${m.slice(0,2).join(' · ')}…</span></button>`;
+function renderScramble(ri){
+  const round=rounds[ri];
+  const mi=activeGroup;
+  const matchup=round.matchups[mi];
+  const tid=pTeam(matchup[0]);
+  const isMyTeam=matchup.includes(currentUser);
+
+  const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
+    const done=filledScramble(ri,gmi)===HOLES;
+    return `<button class="group-nav-btn ${gmi===mi?(done?'done active':'active'):(done?'done':'')}" onclick="activeGroup=${gmi};editMode=false;renderScoring()">Team ${gmi+1}<br><span style="font-size:9px;opacity:.75">${m.slice(0,2).join(' · ')}…</span></button>`;
   }).join('')}</div>`;
 
-  const mi=activeGroup; const matchup=round.matchups[mi]; const tid=pTeam(matchup[0]);
   let hbtn='';
   if(S.hammers[tid]!==null&&S.hammers[tid]!==ri) hbtn=`<span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3)">T${tid} 🔨used</span>`;
   else hbtn=`<button class="hammer-btn ${S.hammers[tid]===ri?'active':''}" onclick="toggleHammer(${tid},${ri})">T${tid} 🔨</button>`;
 
-  const rows=[{label:matchup.join(', '),sublabel:'Scramble — Gross score',scores:S.scrambleHoles[ri][mi],hcp:undefined,fn:'setScrambleHole',args:`${ri},${mi}`}];
+  const sc=S.scrambleHoles[ri][mi];
+  const parArr=getParForRound(ri);
+  const hN=Array.from({length:HOLES},(_,i)=>i+1);
+  const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
+  const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
+  const out=sc.slice(0,9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const inn=sc.slice(9).reduce((s,v)=>s+(v===''?0:+v),0);
+  const canEdit=isMyTeam&&editMode;
 
-  const placed=isSaved?computeScramblePlaces(ri):null;
-  let res='';
-  if(placed){
-    const bm=[2,1,0];
-    res=`<div class="matchup-block" style="margin-top:12px;">
-      <div class="matchup-block-header"><div class="matchup-block-title">Scramble Results</div></div>
-      ${placed.map((mIdx,rank)=>{
-        const mup=round.matchups[mIdx]; const itid=pTeam(mup[0]);
-        const mult=S.hammers[itid]===ri?2:1; const ep=bm[rank]*mult; const g=grossScramble(ri,mIdx);
+  const tableHtml=`<div class="sc-wrap"><table class="sc"><thead><tr>
+    <th class="lft">Team</th>
+    ${hN.slice(0,9).map(h=>`<th>${h}</th>`).join('')}<th>OUT</th>
+    ${hN.slice(9).map(h=>`<th class="${h===10?'divider':''}">${h}</th>`).join('')}
+    <th class="divider">IN</th><th>TOT</th><th>—</th>
+  </tr></thead><tbody>
+  <tr class="par-row"><td class="lft">Par</td>
+    ${parArr.slice(0,9).map(p=>`<td>${p}</td>`).join('')}<td>${op}</td>
+    ${parArr.slice(9).map((p,i)=>`<td class="${i===0?'divider':''}">${p}</td>`).join('')}
+    <td class="divider">${ip}</td><td>${op+ip}</td><td>—</td>
+  </tr>
+  <tr style="${isMyTeam?'background:#f6fbf6;':''}">
+    <td class="lft">${matchup.join(', ')}<br>
+      <span style="font-size:10px;color:var(--muted)">Scramble · Gross</span>
+      ${isMyTeam?`<br><span style="font-size:9px;font-family:'DM Mono',monospace;color:${canEdit?'var(--green)':'var(--muted)'};">${canEdit?'✏️ editing':'🔒 locked'}</span>`:''}
+    </td>
+    ${sc.slice(0,9).map((v,hi)=>`
+      <td class="${scoreClass(v,parArr[hi])}">
+        <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+          ${canEdit?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
+      </td>`).join('')}
+    <td class="tot" id="sc-out-${ri}-${mi}">${out||'—'}</td>
+    ${sc.slice(9).map((v,i)=>{const hi=i+9;return `
+      <td class="${scoreClass(v,parArr[hi])}${i===0?' divider':''}">
+        <input class="hi${canEdit?'':' ro'}" type="number" min="1" max="15" value="${v}"
+          ${canEdit?`oninput="onScrambleInput(${ri},${mi},${hi},this)"`:'readonly tabindex="-1"'}>
+      </td>`;}).join('')}
+    <td class="tot divider" id="sc-in-${ri}-${mi}">${inn||'—'}</td>
+    <td class="tot" id="sc-tot-${ri}-${mi}">${(out+inn)||'—'}</td>
+    <td class="tot">—</td>
+  </tr></tbody></table></div>`;
+
+  const isFinalS = S.finalRounds?.includes(ri);
+  const placed=S.savedRounds.includes(ri)?computeScramblePlaces(ri):null;
+  const resHtml=placed?`
+    <div class="matchup-block" style="margin-top:12px;">
+      <div class="matchup-block-header" style="background:${isFinalS?'#1a4a15':''};">
+        <div class="matchup-block-title">Scramble Results ${isFinalS?'<span style="color:#4ade80">· ✅ Final</span>':''}</div>
+      </div>
+      ${(()=>{const bm=[2,1,0];return placed.map((mIdx,rank)=>{
+        const mup=round.matchups[mIdx];const itid=pTeam(mup[0]);
+        const mult=S.hammers[itid]===ri?2:1;const ep=bm[rank]*mult;const g=grossScramble(ri,mIdx);
         return `<div class="result-row">
           <div class="place-badge ${['p1','p2','p3'][rank]}">${['1st','2nd','3rd'][rank]}</div>
           <div style="flex:1;font-size:13px;font-weight:500">${mup.join(', ')}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${g} gross</div>
-          <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:700">${ep}pt/ea</div>
-        </div>`;
-      }).join('')}</div>`;
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${g} gross</div>
+          <div style="font-family:'DM Mono',monospace;font-size:14px;color:${isFinalS?'var(--gold)':'var(--muted)'};font-weight:700">${isFinalS?ep+'pt/ea':'—'}</div>
+        </div>`;}).join('');})()}
+    </div>`:'';
+
+  let actionBtns = '';
+  if (isMyTeam) {
+    if (isFinalS) {
+      actionBtns = `<div style="text-align:center;padding:12px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>`;
+    } else {
+      actionBtns = `<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+        ${!editMode?`<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Team Scores</button>`:''}
+        ${editMode?`<button id="save-btn" class="save-btn" style="flex:1;" onclick="saveScores()">💾 Save & Sync</button>`:''}
+        ${placed && !editMode?`<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;flex:1;" onclick="endRound(${ri})">🏁 End Round & Award Points</button>`:''}
+      </div>`;
+    }
+  } else {
+    actionBtns = `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:8px;">👁 View only — not your team</div>`;
   }
 
-  document.getElementById('scoring-content').innerHTML=gnav+
-    `<div class="matchup-block"><div class="matchup-block-header"><div class="matchup-block-title">Team ${mi+1} Scorecard${S.hammers[tid]===ri?' 🔨':''}</div><div style="display:flex;gap:6px;align-items:center">${hbtn}</div></div>${scorecardTable(rows,isSaved,getParForRound(ri))}</div>`+
-    res+(isSaved?`<div class="saved-notice">✓ Synced — edit any cell then re-save</div>`:'');
-}
-
-function setHole(name,ri,hi,val){S.holeScores[name][ri][hi]=val;}
-function setScrambleHole(ri,mi,hi,val){S.scrambleHoles[ri][mi][hi]=val;}
-
-async function toggleHammer(tid,ri) {
-  if(S.hammers[tid]===ri) S.hammers[tid]=null;
-  else if(S.hammers[tid]!==null){showToast(`Team ${tid} hammer already used on Round ${S.hammers[tid]+1}`);return;}
-  else S.hammers[tid]=ri;
-  await pushState('Hammer');
-  renderScoring(); renderSchedule();
-}
-
-async function saveScores() {
-  const ri=+document.getElementById('round-selector').value;
-  // Prompt for player name
-  const name=prompt('Your name (for the sync log):','') || 'Player';
-  if(!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
-  await pushState(name);
-  renderScoring(); renderLeaderboard();
-  showToast(`Round ${ri+1} synced for all players! 🔄`);
+  document.getElementById('scoring-content').innerHTML=
+    gnav+
+    `<div class="matchup-block">
+      <div class="matchup-block-header">
+        <div class="matchup-block-title">Team ${mi+1} Scramble${S.hammers[tid]===ri?' 🔨':''}</div>
+        <div style="display:flex;gap:6px;align-items:center">${hbtn}</div>
+      </div>
+      ${tableHtml}
+    </div>`+
+    resHtml+
+    actionBtns;
 }
 
 // ── CHULLIGANS ────────────────────────────────────────────────────────────────
@@ -676,7 +1167,7 @@ function renderChulligans(){
 }
 async function toggleChull(ri,name){
   S.chulligans[ri][name]=!S.chulligans[ri][name];
-  await pushState(name);
+  await pushToFirebase();
   renderChulligans();
 }
 
@@ -702,16 +1193,15 @@ function renderCourses(){
     `<button class="course-tab ${i===activeCourse?'active':''}" onclick="activeCourse=${i};renderCourses()">${c.name}</button>`
   ).join('');
   const c=COURSES[activeCourse];
-  const front=c.holes.slice(0,9); const back=c.holes.slice(9);
-  const fy=front.reduce((s,h)=>s+h.yards,0); const by=back.reduce((s,h)=>s+h.yards,0);
-  const fp=front.reduce((s,h)=>s+h.par,0); const bp=back.reduce((s,h)=>s+h.par,0);
+  const fr=c.holes.slice(0,9); const bk=c.holes.slice(9);
+  const fy=fr.reduce((s,h)=>s+h.yards,0); const by=bk.reduce((s,h)=>s+h.yards,0);
+  const fp=fr.reduce((s,h)=>s+h.par,0); const bp=bk.reduce((s,h)=>s+h.par,0);
   const pc=p=>p===3?'par3c':p===5?'par5c':'';
-  const hrow=(holes,off)=>holes.map((h,i)=>`<tr>
+  const hr=(holes,off)=>holes.map((h,i)=>`<tr>
     <td class="lft">Hole ${i+1+off}</td>
     <td class="${pc(h.par)}">${h.par}</td>
     <td style="${h.hcp<=9?'font-weight:700;color:var(--gold)':''}">${h.hcp}</td>
-    <td style="font-weight:500">${h.yards}</td>
-  </tr>`).join('');
+    <td style="font-weight:500">${h.yards}</td></tr>`).join('');
   document.getElementById('course-content').innerHTML=`
     <div class="course-day">${c.day}</div>
     <div class="course-meta">
@@ -723,11 +1213,9 @@ function renderCourses(){
     <div class="sc-wrap card" style="padding:0;overflow:hidden;">
       <table class="csc"><thead><tr><th class="lft">Hole</th><th>Par</th><th>HCP</th><th>Yards</th></tr></thead>
       <tbody>
-        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Front Nine</td></tr>
-        ${hrow(front,0)}
+        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Front Nine</td></tr>${hr(fr,0)}
         <tr class="totrow"><td class="lft">OUT</td><td>${fp}</td><td>—</td><td>${fy}</td></tr>
-        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Back Nine</td></tr>
-        ${hrow(back,9)}
+        <tr class="nine-hdr"><td class="lft" colspan="4">▸ Back Nine</td></tr>${hr(bk,9)}
         <tr class="totrow"><td class="lft">IN</td><td>${bp}</td><td>—</td><td>${by}</td></tr>
         <tr class="totrow" style="border-top:2px solid var(--green)">
           <td class="lft" style="color:var(--green);font-weight:700">TOTAL</td>
@@ -751,6 +1239,8 @@ function renderRoster(){
     </div>`).join('');
 }
 
+function renderAll(){renderLeaderboard();renderScoring();renderChulligans();renderRoster();renderCourses();}
+
 // ── NAV ───────────────────────────────────────────────────────────────────────
 function showPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -773,7 +1263,7 @@ function showToast(msg){
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
-initSync();
+buildSetup();
 </script>
 </body>
 </html>
