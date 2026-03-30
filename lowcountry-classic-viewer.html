@@ -127,11 +127,7 @@
   .save-btn:disabled{background:#aaa;cursor:not-allowed;}
   .saved-notice{text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);padding:8px;}
 
-  /* CHULLIGANS */
-  .chull-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f5f2eb;}
-  .chull-row:last-child{border-bottom:none;}
-  .chull-btn{padding:4px 14px;border-radius:20px;border:1.5px solid #ddd;background:var(--white);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;color:var(--mid);}
-  .chull-btn.used{background:var(--green);color:var(--white);border-color:var(--green);}
+
 
   /* COURSES */
   .course-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
@@ -247,12 +243,6 @@
   <div id="scoring-content"></div>
 </div>
 
-<div id="page-chulligans" class="page">
-  <div class="section-title">Chulligans</div>
-  <div class="section-sub">1 per player per round</div>
-  <div id="chulligan-content"></div>
-</div>
-
 <div id="page-schedule" class="page">
   <div class="section-title">Schedule</div>
   <div class="section-sub">Full matchup draw</div>
@@ -273,7 +263,6 @@
     <div class="rule-item"><div class="rule-icon">🏌️</div><div class="rule-text"><strong>Format:</strong> 3-player matchups, hole-by-hole. Low <strong>net score</strong> wins. Round 4 scramble = lowest <strong>gross</strong> wins.</div></div>
     <div class="rule-item"><div class="rule-icon">🥇</div><div class="rule-text"><strong>Points:</strong> 1st = <strong>2 pts</strong>, 2nd = <strong>1 pt</strong>, 3rd = <strong>0 pts</strong>.</div></div>
     <div class="rule-item"><div class="rule-icon">🔨</div><div class="rule-text"><strong>Hammer:</strong> Each team hammers 1 round. Their points double (4/2/0). One use per team.</div></div>
-    <div class="rule-item"><div class="rule-icon">⛳</div><div class="rule-text"><strong>Chulligan:</strong> 1 per player per round, any shot.</div></div>
     <div class="rule-item"><div class="rule-icon">🔴</div><div class="rule-text"><strong>Live sync:</strong> Scores push to everyone the moment you hit Save. Leaderboard updates in real time.</div></div>
   </div>
   <div class="section-title" style="margin-top:8px;">Roster</div>
@@ -338,7 +327,6 @@ function defaultState() {
     holeScores: hs,
     scrambleHoles: rounds.map(r => r.matchups.map(() => Array(HOLES).fill(''))),
     hammers: {1:null, 2:null, 3:null},
-    chulligans: rounds.map(() => { const o={}; players.forEach(p=>o[p.name]=false); return o; }),
     savedRounds: [],
     lastUpdated: null,
     updatedBy: null
@@ -381,7 +369,7 @@ function initFirebase() {
             const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
             if(activePage==='leaderboard') renderLeaderboard();
             else if(activePage==='scoring') softRefreshScoring();
-            else if(activePage==='chulligans') renderChulligans();
+            
             else if(activePage==='schedule') renderSchedule();
           }
         } catch(e) { console.warn('Sync parse error', e); }
@@ -447,12 +435,7 @@ function deepGuard(data) {
   // Fix hammers
   if (!s.hammers) s.hammers = {1:null,2:null,3:null};
 
-  // Fix chulligans
-  const ch = fixArr(s.chulligans, rounds.length, null);
-  s.chulligans = ch.map(r => {
-    if (!r || typeof r !== 'object') { const o={}; players.forEach(p=>o[p.name]=false); return o; }
-    return r;
-  });
+
 
   return s;
 }
@@ -496,7 +479,6 @@ function refreshCurrentPage() {
   const id = document.querySelector('.page.active')?.id?.replace('page-','');
   if (id==='leaderboard') renderLeaderboard();
   if (id==='scoring')     renderScoring();
-  if (id==='chulligans')  renderChulligans();
   if (id==='schedule')    renderSchedule();
 }
 
@@ -950,26 +932,6 @@ function renderScramble(ri){
     actionBtns;
 }
 
-// ── CHULLIGANS ────────────────────────────────────────────────────────────────
-function renderChulligans(){
-  document.getElementById('chulligan-content').innerHTML=rounds.map((round,ri)=>`
-    <div class="card" style="margin-bottom:12px;">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:10px;">${round.label}</div>
-      ${players.map(p=>`
-        <div class="chull-row">
-          <div style="font-size:14px;font-weight:500">${p.name}</div>
-          <button class="chull-btn ${S.chulligans[ri][p.name]?'used':''}" onclick="toggleChull(${ri},'${p.name}')">
-            ${S.chulligans[ri][p.name]?'✓ Used':'Available'}
-          </button>
-        </div>`).join('')}
-    </div>`).join('');
-}
-async function toggleChull(ri,name){
-  S.chulligans[ri][name]=!S.chulligans[ri][name];
-  await pushToFirebase();
-  renderChulligans();
-}
-
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
 function renderSchedule(){
   document.getElementById('schedule-content').innerHTML=rounds.map((round,ri)=>`
@@ -1038,7 +1000,7 @@ function renderRoster(){
     </div>`).join('');
 }
 
-function renderAll(){renderLeaderboard();renderScoring();renderChulligans();renderRoster();renderCourses();}
+function renderAll(){renderLeaderboard();renderScoring();renderRoster();renderCourses();}
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
 function showPage(name,btn){
@@ -1048,7 +1010,6 @@ function showPage(name,btn){
   btn.classList.add('active');
   if(name==='leaderboard') renderLeaderboard();
   if(name==='scoring') renderScoring();
-  if(name==='chulligans') renderChulligans();
   if(name==='schedule') renderSchedule();
   if(name==='courses') renderCourses();
   if(name==='rules') renderRoster();
