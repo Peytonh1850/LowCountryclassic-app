@@ -565,7 +565,11 @@ function selectName(name, btn) {
 async function finishSetup() {
   if (!currentUser) return;
   document.getElementById('setup-screen').classList.add('hidden');
-  document.getElementById('header-sub').textContent = `Playing as ${currentUser} · Live Scoring`;
+  document.getElementById('header-sub').textContent = '';
+  document.getElementById('header-sub').innerHTML =
+    currentUser === ADMIN_USER
+      ? `Playing as ${currentUser} · <span style="color:#4ade80;font-family:'DM Mono',monospace;">⚡ ADMIN</span> · Live Scoring`
+      : `Playing as ${currentUser} · Live Scoring`;
   document.getElementById('loading-overlay').classList.remove('hidden');
   document.getElementById('loading-text').textContent = 'Connecting to Firebase...';
 
@@ -696,7 +700,9 @@ function renderLeaderboard() {
 
 // ── SCORING ───────────────────────────────────────────────────────────────────
 let activeGroup = 0;
-let editMode = false; // true = inputs unlocked for currentUser
+let editMode = false; // true = inputs unlocked
+const ADMIN_USER = 'Peyton H'; // Full edit access to all groups, all rounds
+const isAdmin = () => currentUser === ADMIN_USER;
 
 function onRoundChange(){ activeGroup=0; editMode=false; renderScoring(); }
 
@@ -801,7 +807,7 @@ function scorecardTable(rows, parArr, ri, matchup){
   const hN=Array.from({length:HOLES},(_,i)=>i+1);
   const op=parArr.slice(0,9).reduce((a,b)=>a+b,0);
   const ip=parArr.slice(9).reduce((a,b)=>a+b,0);
-  const iAmInGroup = matchup.includes(currentUser);
+  const iAmInGroup = matchup.includes(currentUser) || isAdmin();
 
   let html=`<div class="sc-wrap"><table class="sc"><thead>
     <tr>
@@ -826,7 +832,7 @@ function scorecardTable(rows, parArr, ri, matchup){
   </thead><tbody>`;
 
   rows.forEach(row=>{
-    const canEdit = iAmInGroup && editMode;
+    const canEdit = (iAmInGroup || isAdmin()) && editMode;
     const sc  = safeArr(row.scores);
     const ns  = safeArr(row.nets);
     const sid = row.name.replace(/\s/g,'_');
@@ -952,7 +958,9 @@ async function saveScores(){
 async function endRound(ri){
   const round = rounds[ri];
   const totalGroups = round.matchups.length;
-  const myGroupIdx = round.matchups.findIndex(m => m.includes(currentUser));
+  const myGroupIdx = isAdmin()
+    ? activeGroup  // Admin can finish any group they're viewing
+    : round.matchups.findIndex(m => m.includes(currentUser));
   if (!S.groupsFinished) S.groupsFinished = {};
   if (!S.groupsFinished[ri]) S.groupsFinished[ri] = [];
   const gIdx = myGroupIdx >= 0 ? myGroupIdx : activeGroup;
@@ -1004,7 +1012,7 @@ function renderMatch(ri){
   const round=rounds[ri];
   const mi=activeGroup;
   const matchup=round.matchups[mi];
-  const iAmInGroup = matchup.includes(currentUser);
+  const iAmInGroup = matchup.includes(currentUser) || isAdmin();
 
   const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
     const done=m.every(n=>filledOf(n,ri)===HOLES);
@@ -1135,7 +1143,7 @@ function renderScramble(ri){
   const mi=activeGroup;
   const matchup=round.matchups[mi];
   const tid=pTeam(matchup[0]);
-  const isMyTeam=matchup.includes(currentUser);
+  const isMyTeam=matchup.includes(currentUser) || isAdmin();
 
   const gnav=`<div class="group-nav">${round.matchups.map((m,gmi)=>{
     const done=filledScramble(ri,gmi)===HOLES;
