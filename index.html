@@ -994,12 +994,48 @@ async function reopenRound(ri){
   if (!S.finalRounds) S.finalRounds = [];
   S.finalRounds = S.finalRounds.filter(r => r !== ri);
   if (!S.groupsFinished) S.groupsFinished = {};
-  S.groupsFinished[ri] = []; // Reset all group finishes for this round
+  S.groupsFinished[ri] = [];
   editMode = true;
   await pushToFirebase();
   renderScoring();
   renderLeaderboard();
   showToast(`🔓 Round ${ri+1} reopened — all groups reset.`);
+}
+
+// Admin: unfinish a single group without resetting others
+async function unfinishGroup(ri, gIdx){
+  if (!S.groupsFinished) S.groupsFinished = {};
+  if (!S.groupsFinished[ri]) S.groupsFinished[ri] = [];
+  S.groupsFinished[ri] = S.groupsFinished[ri].filter(g => g !== gIdx);
+  // If round was final, remove finalization since not all groups are done anymore
+  if (S.finalRounds?.includes(ri)) {
+    S.finalRounds = S.finalRounds.filter(r => r !== ri);
+  }
+  await pushToFirebase();
+  renderScoring();
+  renderLeaderboard();
+  showToast(`↩ Group ${gIdx+1} marked unfinished — points removed.`);
+}
+
+// Admin: mark a specific group as finished
+async function adminFinishGroup(ri, gIdx){
+  if (!S.groupsFinished) S.groupsFinished = {};
+  if (!S.groupsFinished[ri]) S.groupsFinished[ri] = [];
+  if (!S.groupsFinished[ri].includes(gIdx)) S.groupsFinished[ri].push(gIdx);
+  if (!S.savedRounds.includes(ri)) S.savedRounds.push(ri);
+  const totalGroups = rounds[ri].matchups.length;
+  if (S.groupsFinished[ri].length >= totalGroups) {
+    if (!S.finalRounds) S.finalRounds = [];
+    if (!S.finalRounds.includes(ri)) S.finalRounds.push(ri);
+    await pushToFirebase();
+    renderScoring();
+    renderLeaderboard();
+    showToast(`🏁 All groups done! Round ${ri+1} finalized & points awarded.`);
+  } else {
+    await pushToFirebase();
+    renderScoring();
+    showToast(`✅ Group ${gIdx+1} marked finished.`);
+  }
 }
 
 function cancelEdit(){
@@ -1079,9 +1115,38 @@ function renderMatch(ri){
       ? `<div style="text-align:center;padding:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--sand);">${finishedCount}/${totalGroups} groups finished · waiting on the rest</div>`
       : '';
 
-  // Action buttons — group members + admin override
+  // Action buttons
   let actionBtns = '';
-  if (iAmInGroup || editMode) {
+
+  if (isAdmin()) {
+    // ── ADMIN: full control over everything ───────────────────────────────
+    const groupFinishBtns = round.matchups.map((_,gmi) => {
+      const done = groupsFinished.includes(gmi);
+      return done
+        ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);font-size:10px;flex:1;" onclick="unfinishGroup(${ri},${gmi})">↩ G${gmi+1} Unfinish</button>`
+        : `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;font-size:10px;flex:1;" onclick="adminFinishGroup(${ri},${gmi})">🏁 G${gmi+1} Finish</button>`;
+    }).join('');
+
+    actionBtns = `
+      <div style="background:rgba(74,222,128,.06);border:1.5px solid rgba(74,222,128,.3);border-radius:8px;padding:10px;margin-top:8px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4ade80;letter-spacing:1px;margin-bottom:8px;">⚡ ADMIN CONTROLS</div>
+        ${finishStatus}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+          ${editMode
+            ? `<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="cancelEdit()">✕ Cancel</button>
+               <button id="save-btn" class="save-btn" style="flex:2;" onclick="saveScores()">💾 Save & Sync</button>`
+            : `<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Any Score</button>`
+          }
+          ${isFinal
+            ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Entire Round</button>`
+            : ''
+          }
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${groupFinishBtns}</div>
+      </div>`;
+
+  } else if (iAmInGroup || editMode) {
+    // ── REGULAR PLAYER in their group ─────────────────────────────────────
     if (isFinal) {
       actionBtns = `
         ${finishStatus}
@@ -1109,6 +1174,7 @@ function renderMatch(ri){
         </div>`;
     }
   } else {
+    // ── NOT in group, not admin ────────────────────────────────────────────
     actionBtns = `
       ${finishStatus}
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:4px;">👁 Not your group</div>
@@ -1214,7 +1280,35 @@ function renderScramble(ri){
     </div>`:'';
 
   let actionBtns = '';
-  if (isMyTeam || editMode) {
+
+  if (isAdmin()) {
+    // ── ADMIN: full scramble control ──────────────────────────────────────
+    const scrambleGroupsFinished = S.groupsFinished?.[ri] || [];
+    const teamFinishBtns = round.matchups.map((_,gmi) => {
+      const done = scrambleGroupsFinished.includes(gmi);
+      return done
+        ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);font-size:10px;flex:1;" onclick="unfinishGroup(${ri},${gmi})">↩ T${gmi+1} Unfinish</button>`
+        : `<button class="save-btn" style="background:#1a4a15;border:1.5px solid #4ade80;font-size:10px;flex:1;" onclick="adminFinishGroup(${ri},${gmi})">🏁 T${gmi+1} Finish</button>`;
+    }).join('');
+
+    actionBtns = `
+      <div style="background:rgba(74,222,128,.06);border:1.5px solid rgba(74,222,128,.3);border-radius:8px;padding:10px;margin-top:8px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4ade80;letter-spacing:1px;margin-bottom:8px;">⚡ ADMIN CONTROLS</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+          ${editMode
+            ? `<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="cancelEdit()">✕ Cancel</button>
+               <button id="save-btn" class="save-btn" style="flex:2;" onclick="saveScores()">💾 Save & Sync</button>`
+            : `<button class="save-btn" style="background:var(--sand);color:var(--dark);flex:1;" onclick="enterEditMode()">✏️ Edit Any Score</button>`
+          }
+          ${isFinalS
+            ? `<button class="save-btn" style="background:transparent;border:1.5px solid var(--red);color:var(--red);flex:1;font-size:11px;" onclick="reopenRound(${ri})">🔓 Reopen Entire Round</button>`
+            : ''
+          }
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${teamFinishBtns}</div>
+      </div>`;
+
+  } else if (isMyTeam || editMode) {
     if (isFinalS) {
       actionBtns = `
         <div style="text-align:center;padding:10px;font-family:'DM Mono',monospace;font-size:11px;color:#4ade80;">✅ Round ${ri+1} is final — points awarded</div>
